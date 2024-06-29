@@ -1,0 +1,4 @@
+scattergories.db
+node_modules
+.env
+vendor
