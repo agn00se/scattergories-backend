@@ -8,18 +8,31 @@ import (
 )
 
 func CreateGameRoom(hostID uint, isPrivate bool, passcode string) (models.GameRoom, error) {
+	// Verify that the host user exists
+	var host models.User
+	if err := config.DB.First(&host, hostID).Error; err != nil {
+		return models.GameRoom{}, ErrHostNotFound
+	}
+
+	// Verify that the host user is not a host in another game room
 	var existingGameRoom models.GameRoom
 	if err := config.DB.Where("host_id = ?", hostID).First(&existingGameRoom).Error; err == nil {
-		return models.GameRoom{}, fmt.Errorf("user is already a host in another game room")
+		return models.GameRoom{}, ErrUserIsAlreadyHostOfAnotherRoom
 	}
 
 	gameRoom := models.GameRoom{
 		RoomCode:  utils.GenerateRoomCode(),
-		HostID:    hostID,
+		HostID:    &hostID,
 		IsPrivate: isPrivate,
 		Passcode:  passcode,
 	}
 	if err := config.DB.Create(&gameRoom).Error; err != nil {
+		return gameRoom, err
+	}
+
+	// Update the user table with the associated game room id
+	host.GameRoomID = &gameRoom.ID
+	if err := config.DB.Save(&host).Error; err != nil {
 		return gameRoom, err
 	}
 
@@ -71,7 +84,7 @@ func UpdateHost(roomID uint, newHostID uint) (models.GameRoom, error) {
 		return models.GameRoom{}, fmt.Errorf("user is already a host in another game room")
 	}
 
-	gameRoom.HostID = newHostID
+	gameRoom.HostID = &newHostID
 	if err := config.DB.Save(&gameRoom).Error; err != nil {
 		return gameRoom, err
 	}

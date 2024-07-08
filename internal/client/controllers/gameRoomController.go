@@ -54,7 +54,13 @@ func CreateGameRoom(c *gin.Context) {
 
 	gameRoom, err := services.CreateGameRoom(request.HostID, request.IsPrivate, request.Passcode)
 	if err != nil {
-		handleError(c, http.StatusInternalServerError, "Failed to create game room")
+		if err == services.ErrHostNotFound {
+			handleError(c, http.StatusNotFound, err.Error())
+		} else if err == services.ErrUserIsAlreadyHostOfAnotherRoom {
+			handleError(c, http.StatusConflict, err.Error())
+		} else {
+			handleError(c, http.StatusInternalServerError, "Failed to create game room")
+		}
 		return
 	}
 

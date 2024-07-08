@@ -9,9 +9,9 @@ import (
 func RegisterGameRoomRoutes(router *gin.Engine) {
 	gameRoomRoutes := router.Group("/game-rooms")
 	{
-		gameRoomRoutes.GET("/", controllers.GetAllGameRooms)
+		gameRoomRoutes.GET("", controllers.GetAllGameRooms)
 		gameRoomRoutes.GET("/:room_id", controllers.GetGameRoom)
-		gameRoomRoutes.POST("/", controllers.CreateGameRoom)
+		gameRoomRoutes.POST("", controllers.CreateGameRoom)
 		gameRoomRoutes.DELETE("/:room_id", controllers.DeleteGameRoom)
 		gameRoomRoutes.PUT("/:room_id/update-host", controllers.UpdateHost)
 
@@ -20,13 +20,13 @@ func RegisterGameRoomRoutes(router *gin.Engine) {
 
 		gameRoutes := gameRoomRoutes.Group("/:room_id/games")
 		{
-			gameRoutes.GET("/", controllers.GetGamesByRoomID)
+			gameRoutes.GET("", controllers.GetGamesByRoomID)
 			gameRoutes.GET("/:game_id", controllers.GetGame)
-			gameRoutes.POST("/", controllers.CreateGame)
+			gameRoutes.POST("", controllers.CreateGame)
 
 			playerRoutes := gameRoutes.Group("/:game_id/players")
 			{
-				playerRoutes.GET("/", controllers.GetPlayersByGameID)
+				playerRoutes.GET("", controllers.GetPlayersByGameID)
 				playerRoutes.GET("/:player_id", controllers.GetPlayer)
 			}
 		}

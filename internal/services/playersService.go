@@ -9,7 +9,7 @@ import (
 
 func GetPlayerByID(roomID uint, gameID uint, playerID uint) (models.Player, error) {
 	var player models.Player
-	if err := config.DB.Where("id = ? AND game_id = ? AND room_id = ?", playerID, gameID, roomID).First(&player).Error; err != nil {
+	if err := config.DB.Where("id = ? AND game_id = ? AND game_room_id = ?", playerID, gameID, roomID).First(&player).Error; err != nil {
 		return models.Player{}, err
 	}
 	return player, nil
@@ -17,7 +17,7 @@ func GetPlayerByID(roomID uint, gameID uint, playerID uint) (models.Player, erro
 
 func GetPlayersByGameID(roomID uint, gameID uint) ([]models.Player, error) {
 	var players []models.Player
-	if err := config.DB.Where("game_id = ? AND room_id = ?", gameID, roomID).Find(&players).Error; err != nil {
+	if err := config.DB.Where("game_id = ? AND game_room_id = ?", gameID, roomID).Find(&players).Error; err != nil {
 		return players, err
 	}
 	return players, nil

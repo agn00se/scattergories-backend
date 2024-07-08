@@ -19,7 +19,7 @@ func JoinGameRoom(userID uint, roomID uint) error {
 
 	// Ensure there isn't any active games in the game room
 	var activeGames []models.Game
-	if err := config.DB.Where("room_id = ? AND (status = ? OR status = ?)", roomID, models.GameStatusOngoing, models.GameStatusVoting).Find(&activeGames).Error; err != nil {
+	if err := config.DB.Where("game_room_id = ? AND (status = ? OR status = ?)", roomID, models.GameStatusOngoing, models.GameStatusVoting).Find(&activeGames).Error; err != nil {
 		return err
 	}
 
@@ -68,6 +68,10 @@ func LeaveGameRoom(userID uint, roomID uint) error {
 	} else {
 		return ErrUserNotInSpecifiedRoom
 	}
+
+	// todo: If host leaves room, assign a new host randomly
+
+	// todo: If last user leaves room, delete game room
 
 	// Update the user record
 	return config.DB.Save(&user).Error

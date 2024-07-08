@@ -46,12 +46,13 @@ func GetUserByID(id uint) (models.User, error) {
 	return user, nil
 }
 
-func UpdateUserByID(id uint, newName string) (models.User, error) {
+func UpdateUserByID(id uint, newName string, newGameRoomID *uint) (models.User, error) {
 	var user models.User
 	if err := config.DB.First(&user, id).Error; err != nil {
 		return user, err
 	}
 	user.Name = newName
+	user.GameRoomID = newGameRoomID
 	if err := config.DB.Save(&user).Error; err != nil {
 		return user, err
 	}

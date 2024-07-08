@@ -72,7 +72,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	user, err := services.UpdateUserByID(id, request.Name)
+	user, err := services.UpdateUserByID(id, request.Name, request.GameRoomID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			handleError(c, http.StatusNotFound, "User not found")

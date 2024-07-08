@@ -11,7 +11,7 @@ import (
 func CreateGame(roomID uint) (models.Game, error) {
 	// Check if the GameRoom has any ongoing or voting games
 	var existingGames []models.Game
-	if err := config.DB.Where("room_id = ? AND (status = ? OR status = ?)", roomID, models.GameStatusOngoing, models.GameStatusVoting).Find(&existingGames).Error; err != nil {
+	if err := config.DB.Where("game_room_id = ? AND (status = ? OR status = ?)", roomID, models.GameStatusOngoing, models.GameStatusVoting).Find(&existingGames).Error; err != nil {
 		return models.Game{}, err
 	}
 
@@ -21,10 +21,10 @@ func CreateGame(roomID uint) (models.Game, error) {
 
 	// Create the new game with the status set to Ongoing
 	game := models.Game{
-		RoomID:    roomID,
-		Status:    models.GameStatusOngoing,
-		StartTime: time.Now(),
-		Letter:    utils.GetRandomLetter(),
+		GameRoomID: roomID,
+		Status:     models.GameStatusOngoing,
+		StartTime:  time.Now(),
+		Letter:     utils.GetRandomLetter(),
 	}
 	if err := config.DB.Create(&game).Error; err != nil {
 		return game, err
@@ -32,7 +32,7 @@ func CreateGame(roomID uint) (models.Game, error) {
 
 	// Find all users in the GameRoom and create Player entries for the new game
 	var users []models.User
-	if err := config.DB.Where("room_id = ?", roomID).Find(&users).Error; err != nil {
+	if err := config.DB.Where("game_room_id = ?", roomID).Find(&users).Error; err != nil {
 		return game, err
 	}
 
@@ -52,7 +52,7 @@ func CreateGame(roomID uint) (models.Game, error) {
 
 func GetGamesByRoomID(roomID uint) ([]models.Game, error) {
 	var games []models.Game
-	if err := config.DB.Where("room_id = ?", roomID).Find(&games).Error; err != nil {
+	if err := config.DB.Where("game_room_id = ?", roomID).Find(&games).Error; err != nil {
 		return games, err
 	}
 	return games, nil
@@ -60,7 +60,7 @@ func GetGamesByRoomID(roomID uint) ([]models.Game, error) {
 
 func GetGameByID(roomID uint, gameID uint) (models.Game, error) {
 	var game models.Game
-	if err := config.DB.Where("id = ? AND room_id = ?", gameID, roomID).First(&game).Error; err != nil {
+	if err := config.DB.Where("id = ? AND game_room_id = ?", gameID, roomID).First(&game).Error; err != nil {
 		return models.Game{}, err
 	}
 	return game, nil

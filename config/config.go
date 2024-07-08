@@ -33,6 +33,9 @@ func ConnectDB() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Automatically migrate the schema for all models
-	DB.AutoMigrate(&models.User{}, &models.GameRoom{}, &models.Game{}, &models.Player{}, &models.GamePrompt{}, &models.Answer{})
+	// Automatically migrate the schema for all models. Order is important.
+	err = DB.AutoMigrate(&models.GameRoom{}, &models.User{}, &models.Game{}, &models.Player{}, &models.GamePrompt{}, &models.Answer{})
+	if err != nil {
+		log.Fatal("Failed to migrate database schema:", err)
+	}
 }

@@ -14,7 +14,7 @@ type GameRoom struct {
 	gorm.Model
 	RoomCode  string `gorm:"not null;unique" json:"room_code"`
 	IsPrivate bool   `gorm:"default:false" json:"is_private"`
-	Passcode  string `json:"passcode,omitempty"`      // Omits empty passcode field in JSON response
-	HostID    uint   `gorm:"not null" json:"host_id"` // HostID is automatically recognized as the foreign key for the Host field because it follows the naming convention FieldNameID (where FieldName is Host).
-	Host      User   `json:"-"`                       // Tells the JSON marshaller to ignore when serializing the struct to JSON.
+	Passcode  string `json:"passcode,omitempty"`         // Omits empty passcode field in JSON response
+	HostID    *uint  `json:"host_id,omitempty"`          // HostID is automatically recognized as the foreign key for the Host field because it follows the naming convention FieldNameID (where FieldName is Host).
+	Host      *User  `gorm:"foreignKey:HostID" json:"-"` // Tells the JSON marshaller to ignore when serializing the struct to JSON.
 }
