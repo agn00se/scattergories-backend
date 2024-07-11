@@ -2,8 +2,9 @@ package models
 
 import "gorm.io/gorm"
 
+// Ensure uniqueness of the combination of GameID and PromptID
 type GamePrompt struct {
 	gorm.Model
-	GameID uint   `gorm:"not null" json:"game_id"`
-	Text   string `gorm:"not null" json:"text"`
+	GameID   uint `gorm:"not null;uniqueIndex:idx_game_prompt" json:"game_id"`
+	PromptID uint `gorm:"not null;uniqueIndex:idx_game_prompt" json:"prompt_id"`
 }
