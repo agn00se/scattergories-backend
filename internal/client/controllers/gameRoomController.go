@@ -13,7 +13,7 @@ import (
 func GetAllGameRooms(c *gin.Context) {
 	rooms, err := services.GetAllGameRooms()
 	if err != nil {
-		handleError(c, http.StatusInternalServerError, "Failed to retrieve game rooms")
+		HandleError(c, http.StatusInternalServerError, "Failed to retrieve game rooms")
 	}
 
 	var response []responses.GameRoomResponse
@@ -25,18 +25,18 @@ func GetAllGameRooms(c *gin.Context) {
 }
 
 func GetGameRoom(c *gin.Context) {
-	id, err := getIDParam(c, "room_id")
+	id, err := GetIDParam(c, "room_id")
 	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid room ID")
+		HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
 	}
 
 	room, err := services.GetGameRoomByID(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			handleError(c, http.StatusNotFound, "Room not found")
+			HandleError(c, http.StatusNotFound, "Room not found")
 		} else {
-			handleError(c, http.StatusInternalServerError, "Failed to get game room")
+			HandleError(c, http.StatusInternalServerError, "Failed to get game room")
 		}
 		return
 	}
@@ -48,18 +48,18 @@ func GetGameRoom(c *gin.Context) {
 func CreateGameRoom(c *gin.Context) {
 	var request requests.GameRoomRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		handleError(c, http.StatusBadRequest, err.Error())
+		HandleError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	gameRoom, err := services.CreateGameRoom(request.HostID, request.IsPrivate, request.Passcode)
 	if err != nil {
 		if err == services.ErrHostNotFound {
-			handleError(c, http.StatusNotFound, err.Error())
+			HandleError(c, http.StatusNotFound, err.Error())
 		} else if err == services.ErrUserIsAlreadyHostOfAnotherRoom {
-			handleError(c, http.StatusConflict, err.Error())
+			HandleError(c, http.StatusConflict, err.Error())
 		} else {
-			handleError(c, http.StatusInternalServerError, "Failed to create game room")
+			HandleError(c, http.StatusInternalServerError, "Failed to create game room")
 		}
 		return
 	}
@@ -69,18 +69,18 @@ func CreateGameRoom(c *gin.Context) {
 }
 
 func DeleteGameRoom(c *gin.Context) {
-	id, err := getIDParam(c, "room_id")
+	id, err := GetIDParam(c, "room_id")
 	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid room ID")
+		HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
 	}
 
 	err = services.DeleteGameRoomByID(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			handleError(c, http.StatusNotFound, "Room not found")
+			HandleError(c, http.StatusNotFound, "Room not found")
 		} else {
-			handleError(c, http.StatusInternalServerError, "Failed to delete game room")
+			HandleError(c, http.StatusInternalServerError, "Failed to delete game room")
 		}
 		return
 	}
@@ -89,24 +89,24 @@ func DeleteGameRoom(c *gin.Context) {
 }
 
 func UpdateHost(c *gin.Context) {
-	id, err := getIDParam(c, "room_id")
+	id, err := GetIDParam(c, "room_id")
 	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid room ID")
+		HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
 	}
 
 	var request requests.UpdateHostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		handleError(c, http.StatusBadRequest, err.Error())
+		HandleError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	gameRoom, err := services.UpdateHost(id, request.NewHostID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			handleError(c, http.StatusNotFound, "Room not found")
+			HandleError(c, http.StatusNotFound, "Room not found")
 		} else {
-			handleError(c, http.StatusInternalServerError, "Failed to update host")
+			HandleError(c, http.StatusInternalServerError, "Failed to update host")
 		}
 		return
 	}

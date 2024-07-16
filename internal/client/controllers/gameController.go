@@ -1,85 +1,76 @@
 package controllers
 
-import (
-	"net/http"
-	"scattergories-backend/internal/client/controllers/responses"
-	"scattergories-backend/internal/services"
+// func GetGamesByRoomID(c *gin.Context) {
+// 	roomID, err := GetIDParam(c, "room_id")
+// 	if err != nil {
+// 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
+// 		return
+// 	}
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
-)
+// 	games, err := services.GetGamesByRoomID(roomID)
+// 	if err != nil {
+// 		if err == gorm.ErrRecordNotFound {
+// 			HandleError(c, http.StatusNotFound, "Room not found")
+// 		} else {
+// 			HandleError(c, http.StatusInternalServerError, "Failed to retrieve games")
+// 		}
+// 		return
+// 	}
 
-func GetGamesByRoomID(c *gin.Context) {
-	roomID, err := getIDParam(c, "room_id")
-	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid room ID")
-		return
-	}
+// 	var response []responses.GameResponse
+// 	for _, game := range games {
+// 		response = append(response, responses.ToGameResponse(game))
+// 	}
 
-	games, err := services.GetGamesByRoomID(roomID)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			handleError(c, http.StatusNotFound, "Room not found")
-		} else {
-			handleError(c, http.StatusInternalServerError, "Failed to retrieve games")
-		}
-		return
-	}
+// 	c.JSON(http.StatusOK, response)
+// }
 
-	var response []responses.GameResponse
-	for _, game := range games {
-		response = append(response, responses.ToGameResponse(game))
-	}
+// func GetGame(c *gin.Context) {
+// 	roomID, err := GetIDParam(c, "room_id")
+// 	if err != nil {
+// 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
+// 		return
+// 	}
 
-	c.JSON(http.StatusOK, response)
-}
+// 	gameID, err := GetIDParam(c, "game_id")
+// 	if err != nil {
+// 		HandleError(c, http.StatusBadRequest, "Invalid game ID")
+// 		return
+// 	}
 
-func GetGame(c *gin.Context) {
-	roomID, err := getIDParam(c, "room_id")
-	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid room ID")
-		return
-	}
+// 	game, err := services.GetGameByID(roomID, gameID)
+// 	if err != nil {
+// 		if err == gorm.ErrRecordNotFound {
+// 			HandleError(c, http.StatusNotFound, "Game not found")
+// 		} else {
+// 			HandleError(c, http.StatusInternalServerError, "Failed to get game")
+// 		}
+// 		return
+// 	}
 
-	gameID, err := getIDParam(c, "game_id")
-	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid game ID")
-		return
-	}
+// 	response := responses.ToGameResponse(game)
+// 	c.JSON(http.StatusOK, response)
+// }
 
-	game, err := services.GetGameByID(roomID, gameID)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			handleError(c, http.StatusNotFound, "Game not found")
-		} else {
-			handleError(c, http.StatusInternalServerError, "Failed to get game")
-		}
-		return
-	}
+// func CreateGame(c *gin.Context) {
+// 	roomID, err := GetIDParam(c, "room_id")
+// 	if err != nil {
+// 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
+// 		return
+// 	}
 
-	response := responses.ToGameResponse(game)
-	c.JSON(http.StatusOK, response)
-}
+// 	game, err := services.CreateGame(roomID)
+// 	if err != nil {
+// 		if err == gorm.ErrRecordNotFound {
+// 			HandleError(c, http.StatusNotFound, "Room not found")
+// 		} else if err == services.ErrActiveGameExists {
+// 			HandleError(c, http.StatusConflict, err.Error())
+// 		} else {
+// 			HandleError(c, http.StatusInternalServerError, "Failed to create game")
+// 		}
+// 		return
+// 	}
 
-func CreateGame(c *gin.Context) {
-	roomID, err := getIDParam(c, "room_id")
-	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid room ID")
-		return
-	}
-
-	game, err := services.CreateGame(roomID)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			handleError(c, http.StatusNotFound, "Room not found")
-		} else if err == services.ErrActiveGameExists {
-			handleError(c, http.StatusConflict, err.Error())
-		} else {
-			handleError(c, http.StatusInternalServerError, "Failed to create game")
-		}
-		return
-	}
-
-	response := responses.ToGameResponse(game)
-	c.JSON(http.StatusOK, response)
-}
+// 	response := responses.ToGameResponse(game)
+// 	c.JSON(http.StatusOK, response)
+// }

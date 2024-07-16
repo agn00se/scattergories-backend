@@ -8,7 +8,7 @@ import (
 type GameResponse struct {
 	ID         uint              `json:"id"`
 	GameRoomID uint              `json:"room_id"`
-	Status     models.GameStatus `json:"host_id"`
+	Status     models.GameStatus `json:"status"`
 	StartTime  time.Time         `json:"start_time"`
 	EndTime    time.Time         `json:"end_time"`
 }

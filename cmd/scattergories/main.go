@@ -10,15 +10,18 @@ import (
 )
 
 func main() {
-	router := gin.Default()
 
 	validators.RegisterCustomValidators()
 
 	config.ConnectDB()
 	config.LoadPrompts()
+
+	go ws.HubInstance.Run()
+
+	router := gin.Default()
 	routes.RegisterRoutes(router)
 
-	router.GET("/ws", func(c *gin.Context) {
+	router.GET("/ws/:room_id", func(c *gin.Context) {
 		ws.HandleWebSocket(c)
 	})
 

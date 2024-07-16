@@ -14,7 +14,7 @@ import (
 func GetAllUsers(c *gin.Context) {
 	users, err := services.GetAllUsers()
 	if err != nil {
-		handleError(c, http.StatusInternalServerError, "Failed to retrieve users")
+		HandleError(c, http.StatusInternalServerError, "Failed to retrieve users")
 	}
 
 	var response []responses.UserResponse
@@ -27,18 +27,18 @@ func GetAllUsers(c *gin.Context) {
 }
 
 func GetUser(c *gin.Context) {
-	id, err := getIDParam(c, "id")
+	id, err := GetIDParam(c, "id")
 	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid user ID")
+		HandleError(c, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	user, err := services.GetUserByID(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			handleError(c, http.StatusNotFound, "User not found")
+			HandleError(c, http.StatusNotFound, "User not found")
 		} else {
-			handleError(c, http.StatusInternalServerError, "Failed to get user")
+			HandleError(c, http.StatusInternalServerError, "Failed to get user")
 		}
 		return
 	}
@@ -50,7 +50,7 @@ func GetUser(c *gin.Context) {
 func CreateUser(c *gin.Context) {
 	user, err := services.CreateGuestUser()
 	if err != nil {
-		handleError(c, http.StatusInternalServerError, "Failed to create user")
+		HandleError(c, http.StatusInternalServerError, "Failed to create user")
 		return
 	}
 
@@ -59,25 +59,25 @@ func CreateUser(c *gin.Context) {
 }
 
 func UpdateUser(c *gin.Context) {
-	id, err := getIDParam(c, "id")
+	id, err := GetIDParam(c, "id")
 	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid user ID")
+		HandleError(c, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	var request requests.UserRequest
 	// short-lived variables like err can be made local within the if statement
 	if err := c.ShouldBindJSON(&request); err != nil {
-		handleError(c, http.StatusBadRequest, err.Error())
+		HandleError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	user, err := services.UpdateUserByID(id, request.Name, request.GameRoomID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			handleError(c, http.StatusNotFound, "User not found")
+			HandleError(c, http.StatusNotFound, "User not found")
 		} else {
-			handleError(c, http.StatusInternalServerError, "Failed to update user")
+			HandleError(c, http.StatusInternalServerError, "Failed to update user")
 		}
 		return
 	}
@@ -87,18 +87,18 @@ func UpdateUser(c *gin.Context) {
 }
 
 func DeleteUser(c *gin.Context) {
-	id, err := getIDParam(c, "id")
+	id, err := GetIDParam(c, "id")
 	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid user ID")
+		HandleError(c, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	err = services.DeleteUserByID(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			handleError(c, http.StatusNotFound, "User not found")
+			HandleError(c, http.StatusNotFound, "User not found")
 		} else {
-			handleError(c, http.StatusInternalServerError, "Failed to delete user")
+			HandleError(c, http.StatusInternalServerError, "Failed to delete user")
 		}
 		return
 	}

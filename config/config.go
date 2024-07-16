@@ -6,7 +6,6 @@ import (
 	"os"
 	"scattergories-backend/internal/models"
 
-	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
@@ -15,7 +14,6 @@ import (
 )
 
 var DB *gorm.DB
-var upgrader = websocket.Upgrader{}
 
 func ConnectDB() {
 	err := godotenv.Load()
@@ -37,7 +35,7 @@ func ConnectDB() {
 	}
 
 	// Automatically migrate the schema for all models. Order is important.
-	err = DB.AutoMigrate(&models.GameRoom{}, &models.User{}, &models.Game{}, &models.Player{}, &models.Prompt{}, &models.GamePrompt{}, &models.Answer{})
+	err = DB.AutoMigrate(&models.GameRoom{}, &models.User{}, &models.Game{}, &models.Player{}, &models.GameRoomConfig{}, &models.Prompt{}, &models.GamePrompt{}, &models.Answer{})
 	if err != nil {
 		log.Fatal("Failed to migrate database schema:", err)
 	}

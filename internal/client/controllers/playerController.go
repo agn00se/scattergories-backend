@@ -10,30 +10,30 @@ import (
 )
 
 func GetPlayer(c *gin.Context) {
-	roomID, err := getIDParam(c, "room_id")
+	roomID, err := GetIDParam(c, "room_id")
 	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid room ID")
+		HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
 	}
 
-	gameID, err := getIDParam(c, "game_id")
+	gameID, err := GetIDParam(c, "game_id")
 	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid game ID")
+		HandleError(c, http.StatusBadRequest, "Invalid game ID")
 		return
 	}
 
-	playerID, err := getIDParam(c, "player_id")
+	playerID, err := GetIDParam(c, "player_id")
 	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid player ID")
+		HandleError(c, http.StatusBadRequest, "Invalid player ID")
 		return
 	}
 
 	player, err := services.GetPlayerByID(roomID, gameID, playerID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			handleError(c, http.StatusNotFound, "Player not found")
+			HandleError(c, http.StatusNotFound, "Player not found")
 		} else {
-			handleError(c, http.StatusInternalServerError, "Failed to get player")
+			HandleError(c, http.StatusInternalServerError, "Failed to get player")
 		}
 		return
 	}
@@ -43,21 +43,21 @@ func GetPlayer(c *gin.Context) {
 }
 
 func GetPlayersByGameID(c *gin.Context) {
-	roomID, err := getIDParam(c, "room_id")
+	roomID, err := GetIDParam(c, "room_id")
 	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid room ID")
+		HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
 	}
 
-	gameID, err := getIDParam(c, "game_id")
+	gameID, err := GetIDParam(c, "game_id")
 	if err != nil {
-		handleError(c, http.StatusBadRequest, "Invalid game ID")
+		HandleError(c, http.StatusBadRequest, "Invalid game ID")
 		return
 	}
 
 	players, err := services.GetPlayersByGameID(roomID, gameID)
 	if err != nil {
-		handleError(c, http.StatusInternalServerError, "Failed to retrieve players")
+		HandleError(c, http.StatusInternalServerError, "Failed to retrieve players")
 		return
 	}
 

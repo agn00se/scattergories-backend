@@ -36,6 +36,11 @@ func CreateGameRoom(hostID uint, isPrivate bool, passcode string) (models.GameRo
 		return gameRoom, err
 	}
 
+	// Create default GameRoomConfig for the new GameRoom
+	if err := CreateDefaultGameRoomConfig(gameRoom.ID); err != nil {
+		return gameRoom, err
+	}
+
 	// Reload the room with the assoicated host
 	if err := config.DB.Preload("Host").First(&gameRoom, gameRoom.ID).Error; err != nil {
 		return gameRoom, err

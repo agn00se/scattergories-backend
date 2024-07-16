@@ -1,6 +1,8 @@
-package requests
+package responses
 
 type StartGameResponse struct {
-	Type   string `json:"type"`
-	GameID uint   `json:"game_id"`
+	Type       string                 `json:"type"`
+	Game       GameResponse           `json:"game"`
+	GameConfig GameRoomConfigResponse `json:"game_config"`
+	Prompts    []GamePromptResponse   `json:"prompts"`
 }

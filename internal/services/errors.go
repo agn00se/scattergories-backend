@@ -9,4 +9,5 @@ var (
 	ErrUserNotInSpecifiedRoom         = errors.New("user is not in the specified game room")
 	ErrHostNotFound                   = errors.New("host user not found")
 	ErrUserIsAlreadyHostOfAnotherRoom = errors.New("user is already host of another room")
+	ErrNotHost                        = errors.New("only host can start a game")
 )

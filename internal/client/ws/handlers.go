@@ -1,46 +1,43 @@
 package ws
 
 import (
-	"github.com/gorilla/websocket"
+	"encoding/json"
+	"log"
+	"scattergories-backend/internal/client/ws/requests"
+	"scattergories-backend/internal/services"
+	"scattergories-backend/pkg/validators"
 )
 
-func HandleMessage(conn *websocket.Conn, messageType string, message []byte) {
+func HandleMessage(client *Client, roomID uint, messageType string, message []byte) {
 	switch messageType {
 	case "start_game":
-		// var req StartGameRequest
-		// if err := json.Unmarshal(message, &req); err != nil {
-		// 	conn.WriteJSON(map[string]interface{}{
-		// 		"type":  "error",
-		// 		"error": "Invalid start_game request format",
-		// 	})
-		// 	return
-		// }
-		// prompts, err := services.StartGame(req.GameID)
-		// if err != nil {
-		// 	conn.WriteJSON(map[string]interface{}{
-		// 		"type":  "error",
-		// 		"error": err.Error(),
-		// 	})
-		// 	return
-		// }
-		// conn.WriteJSON(map[string]interface{}{
-		// 	"type":    "game_started",
-		// 	"prompts": prompts,
-		// })
+		startGame(client, roomID, message)
 	case "submit_answer":
-		// var req SubmitAnswerRequest
-		// if err := json.Unmarshal(message, &req); err != nil {
-		// 	conn.WriteJSON(map[string]interface{}{
-		// 		"type":  "error",
-		// 		"error": "Invalid submit_answer request format",
-		// 	})
-		// 	return
-		// }
-		// // Handle answer submission
 	default:
-		conn.WriteJSON(map[string]interface{}{
-			"type":  "error",
-			"error": "Unknown message type",
-		})
+		sendError(client, "Unknown message type")
 	}
+}
+
+func startGame(client *Client, roomID uint, message []byte) {
+	var req requests.StartGameRequest
+	if err := json.Unmarshal(message, &req); err != nil {
+		sendError(client, "Invalid start_game request format")
+		return
+	}
+
+	// Validate the request using Gin's binding and validation
+	if err := validators.Validate.Struct(req); err != nil {
+		sendError(client, "Validation failed: "+err.Error())
+		return
+	}
+
+	// Start the game
+	response, err := services.CreateGame(roomID, req.UserID)
+	if err != nil {
+		log.Println("startGame: CreateGame error:", err)
+		sendError(client, err.Error())
+		return
+	}
+
+	sendResponse(client, response)
 }

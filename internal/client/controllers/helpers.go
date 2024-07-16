@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func getIDParam(c *gin.Context, param string) (uint, error) {
+func GetIDParam(c *gin.Context, param string) (uint, error) {
 	// strconv.Atoi - ASCII to integer
 	id, err := strconv.Atoi(c.Param(param))
 	if err != nil {
@@ -15,6 +15,6 @@ func getIDParam(c *gin.Context, param string) (uint, error) {
 	return uint(id), nil
 }
 
-func handleError(c *gin.Context, status int, message string) {
+func HandleError(c *gin.Context, status int, message string) {
 	c.JSON(status, gin.H{"error": message})
 }

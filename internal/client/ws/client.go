@@ -1,16 +1,21 @@
 package ws
 
 import (
+	"encoding/json"
+	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
+// Client represents a WebSocket client connected to a specific room.
 // conn - A pointer to the WebSocket connection.
+// roomID - The ID of the room the client is connected to.
 // send - A channel for sending messages to the client.
 type Client struct {
-	conn *websocket.Conn
-	send chan []byte
+	conn   *websocket.Conn
+	roomID uint
+	send   chan []byte
 }
 
 // Continuously reads messages from the WebSocket connection.
@@ -19,15 +24,35 @@ type Client struct {
 // and the WebSocket connection is closed.
 func (c *Client) readPump() {
 	defer func() {
-		hub.unregister <- c
+		HubInstance.unregister <- c
 		c.conn.Close()
+		log.Printf("Client unregistered from room %d", c.roomID)
 	}()
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
+			log.Printf("Error reading message from client in room %d: %v", c.roomID, err)
 			break
 		}
-		hub.broadcast <- message
+
+		// Determine message type
+		var msg map[string]interface{}
+		if err := json.Unmarshal(message, &msg); err != nil {
+			log.Println("Unmarshal error:", err)
+			continue
+		}
+		messageType, ok := msg["type"].(string)
+		if !ok {
+			c.conn.WriteJSON(map[string]interface{}{
+				"type":  "error",
+				"error": "Invalid message format: missing type field",
+			})
+			continue
+		}
+
+		HandleMessage(c, c.roomID, messageType, message)
+
+		HubInstance.broadcast <- Message{RoomID: c.roomID, Content: message}
 	}
 }
 
