@@ -6,6 +6,8 @@ import (
 	"scattergories-backend/internal/models"
 
 	"time"
+
+	"gorm.io/gorm"
 )
 
 func CreateGame(roomID uint, userID uint) (*responses.StartGameResponse, error) {
@@ -86,6 +88,21 @@ func CreateGame(roomID uint, userID uint) (*responses.StartGameResponse, error) 
 	return response, nil
 }
 
+// todo
+func EndGame() {}
+
+func CreateOrUpdateAnswer(answer models.Answer) error {
+	var existingAnswer models.Answer
+	if err := config.DB.Where("player_id = ? AND game_prompt_id = ?", answer.PlayerID, answer.GamePromptID).First(&existingAnswer).Error; err == nil {
+		existingAnswer.Answer = answer.Answer
+		return config.DB.Save(&existingAnswer).Error
+	} else if err != gorm.ErrRecordNotFound {
+		return err
+	}
+	// Create a new answer if no existing answer is found
+	return config.DB.Create(&answer).Error
+}
+
 func GetGamesByRoomID(roomID uint) ([]models.Game, error) {
 	var games []models.Game
 	if err := config.DB.Where("game_room_id = ?", roomID).Find(&games).Error; err != nil {
@@ -100,4 +117,42 @@ func GetGameByID(roomID uint, gameID uint) (models.Game, error) {
 		return models.Game{}, err
 	}
 	return game, nil
+}
+
+func LoadDataForRoom(roomID uint) (*responses.CountdownFinishResponse, error) {
+	// Set game status to Voting stage
+	var game models.Game
+	if err := config.DB.Where("game_room_id = ? AND status = ?", roomID, models.GameStatusOngoing).First(&game).Error; err != nil {
+		return nil, err
+	}
+
+	game.Status = models.GameStatusVoting
+	game.EndTime = time.Now()
+	if err := config.DB.Save(&game).Error; err != nil {
+		return nil, err
+	}
+
+	// Load answers with related Player and GamePrompt (including Prompt)
+	var answers []models.Answer
+	if err := config.DB.Preload("Player.User").Preload("GamePrompt.Prompt").Where("game_prompt_id IN (?)",
+		config.DB.Table("game_prompts").Select("id").Where("game_id = ?", game.ID)).Find(&answers).Error; err != nil {
+		return nil, err
+	}
+
+	// Map answers to response objects
+	responseAnswers := make([]responses.AnswerResponse, len(answers))
+	for i, answer := range answers {
+		responseAnswers[i] = responses.AnswerResponse{
+			Answer:     answer.Answer,
+			IsValid:    answer.IsValid,
+			Player:     responses.ToPlayerResponse(answer.Player),
+			GamePrompt: responses.ToGamePromptResponse(answer.GamePrompt),
+		}
+	}
+
+	response := &responses.CountdownFinishResponse{
+		Game:    responses.ToGameResponse(game),
+		Answers: responseAnswers,
+	}
+	return response, nil
 }

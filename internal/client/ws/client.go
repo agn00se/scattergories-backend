@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"log"
+	"scattergories-backend/internal/services"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -77,4 +78,26 @@ func (c *Client) writePump() {
 			c.conn.WriteMessage(websocket.PingMessage, nil)
 		}
 	}
+}
+
+func (c *Client) startCountdown(duration time.Duration, roomID uint) {
+	go func() {
+		time.Sleep(duration)
+		c.triggerWorkflow(roomID)
+	}()
+}
+
+func (c *Client) triggerWorkflow(roomID uint) {
+	data, err := services.LoadDataForRoom(roomID)
+	if err != nil {
+		sendError(c, "Error loading data")
+		return
+	}
+
+	response := map[string]interface{}{
+		"type": "countdown_complete",
+		"data": data,
+	}
+
+	sendResponse(c, response)
 }
