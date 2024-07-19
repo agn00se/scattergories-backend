@@ -6,6 +6,8 @@ import (
 	"scattergories-backend/config"
 	"scattergories-backend/internal/models"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 func init() {
@@ -41,6 +43,9 @@ func GetAllUsers() ([]models.User, error) {
 func GetUserByID(id uint) (models.User, error) {
 	var user models.User
 	if err := config.DB.First(&user, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return user, ErrUserNotFound
+		}
 		return user, err
 	}
 	return user, nil
@@ -49,6 +54,9 @@ func GetUserByID(id uint) (models.User, error) {
 func UpdateUserByID(id uint, newName string, newGameRoomID *uint) (models.User, error) {
 	var user models.User
 	if err := config.DB.First(&user, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return user, ErrUserNotFound
+		}
 		return user, err
 	}
 	user.Name = newName
@@ -62,6 +70,9 @@ func UpdateUserByID(id uint, newName string, newGameRoomID *uint) (models.User, 
 func DeleteUserByID(id uint) error {
 	var user models.User
 	if err := config.DB.First(&user, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return ErrUserNotFound
+		}
 		return err
 	}
 

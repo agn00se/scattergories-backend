@@ -7,7 +7,6 @@ import (
 	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 func GetAllGameRooms(c *gin.Context) {
@@ -33,8 +32,8 @@ func GetGameRoom(c *gin.Context) {
 
 	room, err := services.GetGameRoomByID(roomID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			HandleError(c, http.StatusNotFound, "Room not found")
+		if err == services.ErrGameRoomNotFound {
+			HandleError(c, http.StatusNotFound, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to get game room")
 		}
@@ -77,8 +76,8 @@ func DeleteGameRoom(c *gin.Context) {
 
 	err = services.DeleteGameRoomByID(id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			HandleError(c, http.StatusNotFound, "Room not found")
+		if err == services.ErrGameRoomNotFound {
+			HandleError(c, http.StatusNotFound, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to delete game room")
 		}
@@ -103,8 +102,8 @@ func UpdateHost(c *gin.Context) {
 
 	gameRoom, err := services.UpdateHost(id, request.NewHostID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			HandleError(c, http.StatusNotFound, "Room not found")
+		if err == services.ErrGameRoomNotFound {
+			HandleError(c, http.StatusNotFound, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to update host")
 		}

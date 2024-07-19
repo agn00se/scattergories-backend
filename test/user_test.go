@@ -95,7 +95,7 @@ func TestGetUserShouldReturnUserNotFound(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "User not found", response["error"])
+	assert.Equal(t, ErrUserNotFound, response["error"])
 }
 
 func TestGetUserShouldReturnIDInvalid(t *testing.T) {
@@ -110,7 +110,7 @@ func TestGetUserShouldReturnIDInvalid(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Invalid user ID", response["error"])
+	assert.Equal(t, ErrInvalidUserID, response["error"])
 }
 
 func TestCreateUserShouldCreateUser(t *testing.T) {
@@ -179,7 +179,7 @@ func TestUpdateUserShouldReturnUserNotFound(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "User not found", response["error"])
+	assert.Equal(t, ErrUserNotFound, response["error"])
 }
 
 func TestUpdateUserShouldReturnIDInvalid(t *testing.T) {
@@ -195,7 +195,7 @@ func TestUpdateUserShouldReturnIDInvalid(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Invalid user ID", response["error"])
+	assert.Equal(t, ErrInvalidUserID, response["error"])
 }
 
 func TestUpdateUserShouldFailValidationGivenNoName(t *testing.T) {
@@ -271,7 +271,7 @@ func TestDeleteUserShouldReturnUserNotFound(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "User not found", response["error"])
+	assert.Equal(t, ErrUserNotFound, response["error"])
 }
 
 func TestDeleteUserShouldReturnIDInvalid(t *testing.T) {
@@ -286,7 +286,7 @@ func TestDeleteUserShouldReturnIDInvalid(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Invalid user ID", response["error"])
+	assert.Equal(t, ErrInvalidUserID, response["error"])
 }
 
 func verifyUserByGet(t *testing.T, returnedUser responses.UserResponse) {

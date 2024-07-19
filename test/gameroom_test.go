@@ -129,7 +129,7 @@ func TestGetGameRoomShouldReturnRoomNotFound(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Room not found", response["error"])
+	assert.Equal(t, ErrGameRoomNotFound, response["error"])
 }
 
 func TestGetGameRoomShouldReturnIDInvalid(t *testing.T) {
@@ -144,7 +144,7 @@ func TestGetGameRoomShouldReturnIDInvalid(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Invalid room ID", response["error"])
+	assert.Equal(t, ErrInvalidRoomID, response["error"])
 }
 
 func TestCreateGameRoomShouldCreateRoom(t *testing.T) {
@@ -274,7 +274,7 @@ func TestCreateGameRoomShouldReturnIDInvalid(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Invalid room ID", response["error"])
+	assert.Equal(t, ErrInvalidRoomID, response["error"])
 }
 
 func TestCreateGameRoomShouldFailGivenNonExistentHostUser(t *testing.T) {
@@ -298,7 +298,7 @@ func TestCreateGameRoomShouldFailGivenNonExistentHostUser(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "host user not found", response["error"])
+	assert.Equal(t, ErrHostNotFound, response["error"])
 }
 
 func TestCreateGameRoomShouldFailGivenDuplicateHost(t *testing.T) {
@@ -329,7 +329,7 @@ func TestCreateGameRoomShouldFailGivenDuplicateHost(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "user is already host of another room", response["error"])
+	assert.Equal(t, ErrUserIsAlreadyHostOfAnotherRoom, response["error"])
 }
 
 func TestJoinGameRoomShouldJoinGameRoom(t *testing.T) {
@@ -418,7 +418,7 @@ func TestJoinGameRoomShouldReturnIDInvalid(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Invalid room ID", response["error"])
+	assert.Equal(t, ErrInvalidRoomID, response["error"])
 }
 
 func TestJoinGameRoomShouldFailValidationGivenNoUser(t *testing.T) {
@@ -441,7 +441,7 @@ func TestJoinGameRoomShouldFailValidationGivenNoUser(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Invalid request", response["error"])
+	assert.Equal(t, "Key: 'JoinLeaveRequest.UserID' Error:Field validation for 'UserID' failed on the 'required' tag", response["error"])
 }
 
 func TestJoinGameRoomShouldReturnRoomNotFound(t *testing.T) {
@@ -468,7 +468,7 @@ func TestJoinGameRoomShouldReturnRoomNotFound(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Game room not found", response["error"])
+	assert.Equal(t, ErrGameRoomNotFound, response["error"])
 }
 
 func TestJoinGameRoomShouldReturnActiveGameExists(t *testing.T) {
@@ -502,7 +502,7 @@ func TestJoinGameRoomShouldReturnActiveGameExists(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Active game exists in the room", response["error"])
+	assert.Equal(t, ErrActiveGameExists, response["error"])
 }
 
 func TestJoinGameRoomShouldReturnUserNotFound(t *testing.T) {
@@ -528,7 +528,7 @@ func TestJoinGameRoomShouldReturnUserNotFound(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "User not found", response["error"])
+	assert.Equal(t, ErrUserNotFound, response["error"])
 }
 
 func TestLeaveGameRoomShouldLeaveRoom(t *testing.T) {
@@ -582,7 +582,7 @@ func TestLeaveGameRoomShouldReturnIDInvalid(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Invalid room ID", response["error"])
+	assert.Equal(t, ErrInvalidRoomID, response["error"])
 }
 
 func TestLeaveGameRoomShouldFailValidationGivenNoUser(t *testing.T) {
@@ -605,7 +605,7 @@ func TestLeaveGameRoomShouldFailValidationGivenNoUser(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Invalid request", response["error"])
+	assert.Equal(t, "Key: 'JoinLeaveRequest.UserID' Error:Field validation for 'UserID' failed on the 'required' tag", response["error"])
 }
 
 func TestLeaveGameRoomShouldReturnRoomNotFound(t *testing.T) {
@@ -632,7 +632,7 @@ func TestLeaveGameRoomShouldReturnRoomNotFound(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Game room not found", response["error"])
+	assert.Equal(t, ErrGameRoomNotFound, response["error"])
 }
 
 func TestLeaveGameRoomShouldReturnUserNotFound(t *testing.T) {
@@ -658,7 +658,7 @@ func TestLeaveGameRoomShouldReturnUserNotFound(t *testing.T) {
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "User not found", response["error"])
+	assert.Equal(t, ErrUserNotFound, response["error"])
 }
 
 func TestLeaveGameRoomUserNotInSpecifiedRoom(t *testing.T) {
@@ -683,10 +683,10 @@ func TestLeaveGameRoomUserNotInSpecifiedRoom(t *testing.T) {
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
-	assert.Equal(t, http.StatusBadRequest, resp.Code)
+	assert.Equal(t, http.StatusNotFound, resp.Code)
 
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "User is not in the specified game room", response["error"])
+	assert.Equal(t, ErrUserNotInSpecifiedRoom, response["error"])
 }

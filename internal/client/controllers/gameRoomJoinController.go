@@ -17,18 +17,16 @@ func JoinGameRoom(c *gin.Context) {
 
 	var request requests.JoinLeaveRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		HandleError(c, http.StatusBadRequest, "Invalid request")
+		HandleError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	err = services.JoinGameRoom(request.UserID, roomID)
 	if err != nil {
-		if err == services.ErrGameRoomNotFound {
-			HandleError(c, http.StatusNotFound, "Game room not found")
+		if err == services.ErrGameRoomNotFound || err == services.ErrUserNotFound {
+			HandleError(c, http.StatusNotFound, err.Error())
 		} else if err == services.ErrActiveGameExists {
-			HandleError(c, http.StatusConflict, "Active game exists in the room")
-		} else if err == services.ErrUserNotFound {
-			HandleError(c, http.StatusNotFound, "User not found")
+			HandleError(c, http.StatusConflict, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to join game room")
 		}
@@ -47,18 +45,16 @@ func LeaveGameRoom(c *gin.Context) {
 
 	var request requests.JoinLeaveRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		HandleError(c, http.StatusBadRequest, "Invalid request")
+		HandleError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	err = services.LeaveGameRoom(request.UserID, roomID)
 	if err != nil {
-		if err == services.ErrGameRoomNotFound {
-			HandleError(c, http.StatusNotFound, "Game room not found")
-		} else if err == services.ErrUserNotFound {
-			HandleError(c, http.StatusNotFound, "User not found")
-		} else if err == services.ErrUserNotInSpecifiedRoom {
-			HandleError(c, http.StatusNotFound, "User is not in the specified game room")
+		if err == services.ErrGameRoomNotFound ||
+			err == services.ErrUserNotFound ||
+			err == services.ErrUserNotInSpecifiedRoom {
+			HandleError(c, http.StatusNotFound, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to leave game room")
 		}

@@ -5,6 +5,8 @@ import (
 	"scattergories-backend/config"
 	"scattergories-backend/internal/models"
 	"scattergories-backend/pkg/utils"
+
+	"gorm.io/gorm"
 )
 
 func CreateGameRoom(hostID uint, isPrivate bool, passcode string) (models.GameRoom, error) {
@@ -61,6 +63,9 @@ func GetGameRoomByID(roomID uint) (models.GameRoom, error) {
 
 	// Eager Preload - tells GORM to load the associated Host object when querying for the GameRoom.
 	if err := config.DB.Preload("Host").First(&gameRoom, roomID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return gameRoom, ErrGameRoomNotFound
+		}
 		return gameRoom, err
 	}
 	return gameRoom, nil
@@ -69,6 +74,9 @@ func GetGameRoomByID(roomID uint) (models.GameRoom, error) {
 func DeleteGameRoomByID(roomID uint) error {
 	var gameRoom models.GameRoom
 	if err := config.DB.First(&gameRoom, roomID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return ErrGameRoomNotFound
+		}
 		return err
 	}
 
@@ -81,6 +89,9 @@ func DeleteGameRoomByID(roomID uint) error {
 func UpdateHost(roomID uint, newHostID uint) (models.GameRoom, error) {
 	var gameRoom models.GameRoom
 	if err := config.DB.First(&gameRoom, roomID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return gameRoom, ErrGameRoomNotFound
+		}
 		return gameRoom, err
 	}
 

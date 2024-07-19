@@ -8,7 +8,6 @@ import (
 	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 func GetAllUsers(c *gin.Context) {
@@ -35,8 +34,8 @@ func GetUser(c *gin.Context) {
 
 	user, err := services.GetUserByID(id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			HandleError(c, http.StatusNotFound, "User not found")
+		if err == services.ErrUserNotFound {
+			HandleError(c, http.StatusNotFound, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to get user")
 		}
@@ -74,8 +73,8 @@ func UpdateUser(c *gin.Context) {
 
 	user, err := services.UpdateUserByID(id, request.Name, request.GameRoomID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			HandleError(c, http.StatusNotFound, "User not found")
+		if err == services.ErrUserNotFound {
+			HandleError(c, http.StatusNotFound, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to update user")
 		}
@@ -95,8 +94,8 @@ func DeleteUser(c *gin.Context) {
 
 	err = services.DeleteUserByID(id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			HandleError(c, http.StatusNotFound, "User not found")
+		if err == services.ErrUserNotFound {
+			HandleError(c, http.StatusNotFound, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to delete user")
 		}
