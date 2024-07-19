@@ -1,6 +1,6 @@
 # Scattergories Backend
 
-Scattergories Backend is a web application that provides the backend services for a Scattergories game. The application is built using Go and the Gin framework, and it includes functionalities for managing users, game rooms, and game configurations.
+Scattergories Backend is a web application that provides the backend services for a Scattergories game. The application is built using Go and the Gin framework, and it includes functionalities for managing users, game rooms, and game configurations. PostgreSQL is used as the database for storing data, and WebSocket is used for real-time game communication.
 
 ## Project Structure
 
@@ -23,7 +23,7 @@ The project is organized into the following directories:
 1. **Clone the repository**:
 
     ```sh
-    git clone https://github.com/your-username/scattergories-backend.git
+    git clone https://github.com/agn00se/scattergories-backend.git
     cd scattergories-backend
     ```
 
