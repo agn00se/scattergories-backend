@@ -2,7 +2,6 @@ package ws
 
 import (
 	"encoding/json"
-	"log"
 	"scattergories-backend/internal/client/ws/requests"
 	"scattergories-backend/internal/models"
 	"scattergories-backend/internal/services"
@@ -16,6 +15,8 @@ func HandleMessage(client *Client, roomID uint, messageType string, message []by
 		startGame(client, roomID, message)
 	case "submit_answer":
 		submitAnswer(client, message)
+	case "update_game_config":
+		updateGameConfig(client, roomID, message)
 	default:
 		sendError(client, "Unknown message type")
 	}
@@ -37,7 +38,6 @@ func startGame(client *Client, roomID uint, message []byte) {
 	// Start the game
 	response, err := services.CreateGame(roomID, req.UserID)
 	if err != nil {
-		log.Println("startGame: CreateGame error:", err)
 		sendError(client, err.Error())
 		return
 	}
@@ -76,4 +76,32 @@ func submitAnswer(client *Client, message []byte) {
 		"type":   "submit_answer_response",
 		"status": "Answer submitted",
 	})
+}
+
+func updateGameConfig(client *Client, roomID uint, message []byte) {
+	var req requests.UpdateGameConfigRequest
+	if err := json.Unmarshal(message, &req); err != nil {
+		sendError(client, "Invalid submit_answer request format")
+		return
+	}
+
+	if err := validators.Validate.Struct(req); err != nil {
+		sendError(client, "Validation failed: "+err.Error())
+		return
+	}
+
+	config := models.GameRoomConfig{
+		GameRoomID:      roomID,
+		TimeLimit:       req.TimeLimit,
+		NumberOfPrompts: req.NumberOfPrompts,
+		Letter:          req.Letter,
+	}
+
+	response, err := services.UpdateGameConfig(config, req.UserID)
+	if err != nil {
+		sendError(client, err.Error())
+		return
+	}
+
+	sendResponse(client, response)
 }

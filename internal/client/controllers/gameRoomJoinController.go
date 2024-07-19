@@ -58,7 +58,7 @@ func LeaveGameRoom(c *gin.Context) {
 		} else if err == services.ErrUserNotFound {
 			HandleError(c, http.StatusNotFound, "User not found")
 		} else if err == services.ErrUserNotInSpecifiedRoom {
-			HandleError(c, http.StatusBadRequest, "User is not in the specified game room")
+			HandleError(c, http.StatusNotFound, "User is not in the specified game room")
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to leave game room")
 		}

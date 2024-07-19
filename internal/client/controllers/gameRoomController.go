@@ -25,13 +25,13 @@ func GetAllGameRooms(c *gin.Context) {
 }
 
 func GetGameRoom(c *gin.Context) {
-	id, err := GetIDParam(c, "room_id")
+	roomID, err := GetIDParam(c, "room_id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
 	}
 
-	room, err := services.GetGameRoomByID(id)
+	room, err := services.GetGameRoomByID(roomID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			HandleError(c, http.StatusNotFound, "Room not found")

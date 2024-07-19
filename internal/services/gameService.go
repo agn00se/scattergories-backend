@@ -17,7 +17,7 @@ func CreateGame(roomID uint, userID uint) (*responses.StartGameResponse, error) 
 		return nil, err
 	}
 	if gameRoom.HostID != nil && *gameRoom.HostID != userID {
-		return nil, ErrNotHost
+		return nil, ErrStartGameNotHost
 	}
 
 	// Check if the GameRoom has any ongoing or voting games
@@ -75,9 +75,8 @@ func CreateGame(roomID uint, userID uint) (*responses.StartGameResponse, error) 
 	}
 
 	response := &responses.StartGameResponse{
-		Type:       "start_game_response",
 		Game:       responses.ToGameResponse(game),
-		GameConfig: responses.ToGameRoomConfigResponse(gameRoomConfig),
+		GameConfig: responses.ToGameConfigResponse(gameRoomConfig),
 		Prompts:    make([]responses.GamePromptResponse, len(gamePrompts)),
 	}
 
