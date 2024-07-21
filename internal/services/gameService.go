@@ -1,157 +1,122 @@
 package services
 
 import (
-	"scattergories-backend/config"
-	"scattergories-backend/internal/client/ws/responses"
+	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/repositories"
 
 	"time"
 
 	"gorm.io/gorm"
 )
 
-func CreateGame(roomID uint, userID uint) (*responses.StartGameResponse, error) {
-	// Check if user is host of the GameRoom
-	var gameRoom models.GameRoom
-	if err := config.DB.First(&gameRoom, "id = ?", roomID).Error; err != nil {
-		return nil, err
-	}
-	if gameRoom.HostID != nil && *gameRoom.HostID != userID {
-		return nil, ErrStartGameNotHost
+func StartGame(roomID uint, userID uint) (*models.Game, *models.GameRoomConfig, []*models.GamePrompt, error) {
+	// Verify host
+	if err := VerifyGameRoomHost(roomID, userID, common.ErrStartGameNotHost); err != nil {
+		return nil, nil, nil, err
 	}
 
-	// Check if the GameRoom has any ongoing or voting games
-	var existingGames []models.Game
-	if err := config.DB.Where("game_room_id = ? AND (status = ? OR status = ?)", roomID, models.GameStatusOngoing, models.GameStatusVoting).Find(&existingGames).Error; err != nil {
-		return nil, err
+	// Verify no game at the Ongoing or Voting stage
+	if err := VerifyNoActiveGameInRoom(roomID); err != nil {
+		return nil, nil, nil, err
 	}
 
-	if len(existingGames) > 0 {
-		return nil, ErrActiveGameExists
-	}
-
-	// Create the new game with the status set to Ongoing
-	game := models.Game{
+	// Create a new game with the status set to Ongoing
+	game := &models.Game{
 		GameRoomID: roomID,
 		Status:     models.GameStatusOngoing,
 		StartTime:  time.Now(),
 	}
-	if err := config.DB.Create(&game).Error; err != nil {
-		return nil, err
+	if err := repositories.CreateGame(game); err != nil {
+		return nil, nil, nil, err
 	}
 
 	// Find all users in the GameRoom and create Player entries for the new game
-	var users []models.User
-	if err := config.DB.Where("game_room_id = ?", roomID).Find(&users).Error; err != nil {
-		return nil, err
+	users, err := GetUsersByGameRoomID(roomID)
+	if err != nil {
+		return nil, nil, nil, err
 	}
-
-	for _, user := range users {
-		gamePlayer := models.Player{
-			UserID: user.ID,
-			GameID: game.ID,
-			Score:  0,
-		}
-		if err := config.DB.Create(&gamePlayer).Error; err != nil {
-			return nil, err
-		}
+	if err := CreatePlayersInGame(users, roomID); err != nil {
+		return nil, nil, nil, err
 	}
 
 	// Load GameRoomConfig
-	var gameRoomConfig models.GameRoomConfig
-	if err := config.DB.First(&gameRoomConfig, "game_room_id = ?", roomID).Error; err != nil {
-		return nil, err
+	gameRoomConfig, err := GetGameRoomConfigByRoomID(roomID)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
-	// Create default game prompts
+	// Create and load default game prompts
 	if err := CreateGamePrompts(game.ID, gameRoomConfig.NumberOfPrompts); err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
-	// Load GamePrompt
-	var gamePrompts []models.GamePrompt
-	if err := config.DB.Where("game_id = ?", game.ID).Preload("Prompt").Find(&gamePrompts).Error; err != nil {
-		return nil, err
+	gamePrompts, err := GetGamePromptsByGameID(game.ID)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
-	response := &responses.StartGameResponse{
-		Game:       responses.ToGameResponse(game),
-		GameConfig: responses.ToGameConfigResponse(gameRoomConfig),
-		Prompts:    make([]responses.GamePromptResponse, len(gamePrompts)),
-	}
+	// Return StartGameReponse
+	return game, gameRoomConfig, gamePrompts, nil
+}
 
-	for i, prompt := range gamePrompts {
-		response.Prompts[i] = responses.ToGamePromptResponse(prompt)
-	}
-
-	return response, nil
+func UpdateGame(game *models.Game) error {
+	return repositories.UpdateGame(game)
 }
 
 // todo
-func EndGame() {}
+// func EndGame(req *models.EndGameRequest) (*responses.EndGameResponse, error) {
+//     if err := ValidateGameRoomHost(req.RoomID, req.UserID); err != nil {
+//         return nil, err
+//     }
 
-func CreateOrUpdateAnswer(answer models.Answer) error {
-	var existingAnswer models.Answer
-	if err := config.DB.Where("player_id = ? AND game_prompt_id = ?", answer.PlayerID, answer.GamePromptID).First(&existingAnswer).Error; err == nil {
-		existingAnswer.Answer = answer.Answer
-		return config.DB.Save(&existingAnswer).Error
-	} else if err != gorm.ErrRecordNotFound {
+//     game, err := GetGameByID(req.GameID)
+//     if err != nil {
+//         return nil, err
+//     }
+
+//     game.Status = models.GameStatusCompleted
+//     game.EndTime = time.Now()
+//     if err := config.DB.Save(game).Error; err != nil {
+//         return nil, err
+//     }
+
+//     // Calculate final scores
+//     players, err := GetPlayersByGameID(req.GameID)
+//     if err != nil {
+//         return nil, err
+// 	}
+
+//     response := &responses.EndGameResponse{
+//         Game:    responses.ToGameResponse(game),
+//         Players: make([]responses.PlayerResponse, len(players)),
+//     }
+
+//     for i, player := range players {
+//         response.Players[i] = responses.ToPlayerResponse(&player)
+//     }
+
+//     return response, nil
+// }
+
+func VerifyNoActiveGameInRoom(roomID uint) error {
+	_, err := repositories.GetGameByRoomIDAndStatus(roomID, string(models.GameStatusOngoing), string(models.GameStatusVoting))
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil // No active games found
+		}
 		return err
 	}
-	// Create a new answer if no existing answer is found
-	return config.DB.Create(&answer).Error
+	return common.ErrActiveGameExists
 }
 
-func GetGamesByRoomID(roomID uint) ([]models.Game, error) {
-	var games []models.Game
-	if err := config.DB.Where("game_room_id = ?", roomID).Find(&games).Error; err != nil {
-		return games, err
-	}
-	return games, nil
-}
-
-func GetGameByID(roomID uint, gameID uint) (models.Game, error) {
-	var game models.Game
-	if err := config.DB.Where("id = ? AND game_room_id = ?", gameID, roomID).First(&game).Error; err != nil {
-		return models.Game{}, err
+func GetOngoingGameInRoom(roomID uint) (*models.Game, error) {
+	game, err := repositories.GetGameByRoomIDAndStatus(roomID, string(models.GameStatusOngoing))
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, common.ErrNoOngoingGameInRoom // No ongoing games found
+		}
+		return nil, err
 	}
 	return game, nil
-}
-
-func LoadDataForRoom(roomID uint) (*responses.CountdownFinishResponse, error) {
-	// Set game status to Voting stage
-	var game models.Game
-	if err := config.DB.Where("game_room_id = ? AND status = ?", roomID, models.GameStatusOngoing).First(&game).Error; err != nil {
-		return nil, err
-	}
-
-	game.Status = models.GameStatusVoting
-	game.EndTime = time.Now()
-	if err := config.DB.Save(&game).Error; err != nil {
-		return nil, err
-	}
-
-	// Load answers with related Player and GamePrompt (including Prompt)
-	var answers []models.Answer
-	if err := config.DB.Preload("Player.User").Preload("GamePrompt.Prompt").Where("game_prompt_id IN (?)",
-		config.DB.Table("game_prompts").Select("id").Where("game_id = ?", game.ID)).Find(&answers).Error; err != nil {
-		return nil, err
-	}
-
-	// Map answers to response objects
-	responseAnswers := make([]responses.AnswerResponse, len(answers))
-	for i, answer := range answers {
-		responseAnswers[i] = responses.AnswerResponse{
-			Answer:     answer.Answer,
-			IsValid:    answer.IsValid,
-			Player:     responses.ToPlayerResponse(answer.Player),
-			GamePrompt: responses.ToGamePromptResponse(answer.GamePrompt),
-		}
-	}
-
-	response := &responses.CountdownFinishResponse{
-		Game:    responses.ToGameResponse(game),
-		Answers: responseAnswers,
-	}
-	return response, nil
 }

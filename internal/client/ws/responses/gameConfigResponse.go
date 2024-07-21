@@ -8,8 +8,8 @@ type GameConfigResponse struct {
 	Letter          string `json:"letter"`
 }
 
-func ToGameConfigResponse(config models.GameRoomConfig) GameConfigResponse {
-	return GameConfigResponse{
+func ToGameConfigResponse(config *models.GameRoomConfig) *GameConfigResponse {
+	return &GameConfigResponse{
 		TimeLimit:       config.TimeLimit,
 		NumberOfPrompts: config.NumberOfPrompts,
 		Letter:          config.Letter,

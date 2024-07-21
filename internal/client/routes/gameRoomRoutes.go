@@ -15,7 +15,7 @@ func RegisterGameRoomRoutes(router *gin.Engine) {
 		gameRoomRoutes.DELETE("/:room_id", controllers.DeleteGameRoom)
 		gameRoomRoutes.PUT("/:room_id/update-host", controllers.UpdateHost)
 
-		gameRoomRoutes.POST("/:room_id/join", controllers.JoinGameRoom)
-		gameRoomRoutes.POST("/:room_id/leave", controllers.LeaveGameRoom)
+		gameRoomRoutes.PUT("/:room_id/join", controllers.JoinGameRoom)
+		gameRoomRoutes.PUT("/:room_id/leave", controllers.LeaveGameRoom)
 	}
 }

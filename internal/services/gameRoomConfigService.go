@@ -1,9 +1,9 @@
 package services
 
 import (
-	"scattergories-backend/config"
-	"scattergories-backend/internal/client/ws/responses"
+	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/repositories"
 	"scattergories-backend/pkg/utils"
 	"strings"
 )
@@ -13,45 +13,42 @@ var (
 	defaultNumberOfPrompts = 10
 )
 
+func GetGameRoomConfigByRoomID(roomID uint) (*models.GameRoomConfig, error) {
+	return repositories.GetGameRoomConfigByRoomID(roomID)
+}
+
 func CreateDefaultGameRoomConfig(gameRoomID uint) error {
-	gameRoomConfig := models.GameRoomConfig{
+	gameRoomConfig := &models.GameRoomConfig{
 		GameRoomID:      gameRoomID,
 		TimeLimit:       defaultTimeLimit,
 		NumberOfPrompts: defaultNumberOfPrompts,
 		Letter:          utils.GetRandomLetter(),
 	}
-	if err := config.DB.Create(&gameRoomConfig).Error; err != nil {
+
+	if err := repositories.CreateGameRoomConfig(gameRoomConfig); err != nil {
 		return err
 	}
 	return nil
 }
 
-func UpdateGameConfig(req models.GameRoomConfig, userID uint) (*responses.GameConfigResponse, error) {
+func UpdateGameConfig(request *models.GameRoomConfig, userID uint) (*models.GameRoomConfig, error) {
 	// Verify host
-	var gameRoom models.GameRoom
-	if err := config.DB.Preload("Host").Where("id = ?", req.GameRoomID).First(&gameRoom).Error; err != nil {
-		return nil, err
-	}
-	if gameRoom.HostID == nil || *gameRoom.HostID != userID {
-		return nil, ErrUpdateConfigNotHost
-	}
+	VerifyGameRoomHost(request.GameRoomID, userID, common.ErrUpdateConfigNotHost)
 
 	// Fetch game room config
-	var gameRoomConfig models.GameRoomConfig
-	if err := config.DB.Where("game_room_id = ?", req.GameRoomID).First(&gameRoomConfig).Error; err != nil {
+	gameRoomConfig, err := GetGameRoomConfigByRoomID(request.GameRoomID)
+	if err != nil {
 		return nil, err
 	}
 
 	// Update and save game room config
-	gameRoomConfig.TimeLimit = req.TimeLimit
-	gameRoomConfig.NumberOfPrompts = req.NumberOfPrompts
-	gameRoomConfig.Letter = strings.ToUpper(req.Letter)
+	gameRoomConfig.TimeLimit = request.TimeLimit
+	gameRoomConfig.NumberOfPrompts = request.NumberOfPrompts
+	gameRoomConfig.Letter = strings.ToUpper(request.Letter)
 
-	if err := config.DB.Save(&gameRoomConfig).Error; err != nil {
+	if err := repositories.UpdateGameRoomConfig(gameRoomConfig); err != nil {
 		return nil, err
 	}
 
-	response := responses.ToGameConfigResponse(gameRoomConfig)
-
-	return &response, nil
+	return gameRoomConfig, nil
 }

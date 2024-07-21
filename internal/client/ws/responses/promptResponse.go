@@ -7,8 +7,8 @@ type PromptResponse struct {
 	Text string `json:"text"`
 }
 
-func toPromptResponse(prompt models.Prompt) PromptResponse {
-	return PromptResponse{
+func toPromptResponse(prompt *models.Prompt) *PromptResponse {
+	return &PromptResponse{
 		ID:   prompt.ID,
 		Text: prompt.Text,
 	}

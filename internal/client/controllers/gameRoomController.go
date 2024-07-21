@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"scattergories-backend/internal/client/controllers/requests"
 	"scattergories-backend/internal/client/controllers/responses"
+	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -13,9 +14,10 @@ func GetAllGameRooms(c *gin.Context) {
 	rooms, err := services.GetAllGameRooms()
 	if err != nil {
 		HandleError(c, http.StatusInternalServerError, "Failed to retrieve game rooms")
+		return
 	}
 
-	var response []responses.GameRoomResponse
+	response := make([]*responses.GameRoomResponse, 0, len(rooms))
 	for _, room := range rooms {
 		response = append(response, responses.ToGameRoomResponse(room))
 	}
@@ -32,7 +34,7 @@ func GetGameRoom(c *gin.Context) {
 
 	room, err := services.GetGameRoomByID(roomID)
 	if err != nil {
-		if err == services.ErrGameRoomNotFound {
+		if err == common.ErrGameRoomNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to get game room")
@@ -53,9 +55,9 @@ func CreateGameRoom(c *gin.Context) {
 
 	gameRoom, err := services.CreateGameRoom(request.HostID, request.IsPrivate, request.Passcode)
 	if err != nil {
-		if err == services.ErrHostNotFound {
+		if err == common.ErrUserNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
-		} else if err == services.ErrUserIsAlreadyHostOfAnotherRoom {
+		} else if err == common.ErrUserIsAlreadyHostOfAnotherRoom {
 			HandleError(c, http.StatusConflict, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to create game room")
@@ -64,7 +66,7 @@ func CreateGameRoom(c *gin.Context) {
 	}
 
 	response := responses.ToGameRoomResponse(gameRoom)
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusCreated, response)
 }
 
 func DeleteGameRoom(c *gin.Context) {
@@ -76,7 +78,7 @@ func DeleteGameRoom(c *gin.Context) {
 
 	err = services.DeleteGameRoomByID(id)
 	if err != nil {
-		if err == services.ErrGameRoomNotFound {
+		if err == common.ErrGameRoomNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to delete game room")
@@ -84,7 +86,7 @@ func DeleteGameRoom(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Room deleted"})
+	c.JSON(http.StatusNoContent, gin.H{"message": "Room deleted"})
 }
 
 func UpdateHost(c *gin.Context) {
@@ -102,8 +104,10 @@ func UpdateHost(c *gin.Context) {
 
 	gameRoom, err := services.UpdateHost(id, request.NewHostID)
 	if err != nil {
-		if err == services.ErrGameRoomNotFound {
+		if err == common.ErrGameRoomNotFound || err == common.ErrUserNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
+		} else if err == common.ErrUserIsAlreadyHostOfAnotherRoom {
+			HandleError(c, http.StatusConflict, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to update host")
 		}

@@ -13,8 +13,8 @@ type GameResponse struct {
 	EndTime    time.Time         `json:"end_time"`
 }
 
-func ToGameResponse(game models.Game) GameResponse {
-	return GameResponse{
+func ToGameResponse(game *models.Game) *GameResponse {
+	return &GameResponse{
 		ID:         game.ID,
 		GameRoomID: game.GameRoomID,
 		Status:     game.Status,

@@ -8,8 +8,8 @@ type PlayerResponse struct {
 	Score  int    `json:"score"`
 }
 
-func ToPlayerResponse(player models.Player) PlayerResponse {
-	return PlayerResponse{
+func ToPlayerResponse(player *models.Player) *PlayerResponse {
+	return &PlayerResponse{
 		UserID: player.UserID,
 		Name:   player.User.Name,
 		Score:  player.Score,

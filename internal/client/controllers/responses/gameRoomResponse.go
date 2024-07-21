@@ -11,12 +11,12 @@ type GameRoomResponse struct {
 }
 
 // Passcode is excluded from return response for security reasons
-func ToGameRoomResponse(gameRoom models.GameRoom) GameRoomResponse {
+func ToGameRoomResponse(gameRoom *models.GameRoom) *GameRoomResponse {
 	var hostName *string
 	if gameRoom.Host != nil {
 		hostName = &gameRoom.Host.Name
 	}
-	return GameRoomResponse{
+	return &GameRoomResponse{
 		ID:        gameRoom.ID,
 		RoomCode:  gameRoom.RoomCode,
 		HostID:    gameRoom.HostID,

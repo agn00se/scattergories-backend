@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 	"scattergories-backend/internal/client/controllers/requests"
+	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -23,9 +24,9 @@ func JoinGameRoom(c *gin.Context) {
 
 	err = services.JoinGameRoom(request.UserID, roomID)
 	if err != nil {
-		if err == services.ErrGameRoomNotFound || err == services.ErrUserNotFound {
+		if err == common.ErrGameRoomNotFound || err == common.ErrUserNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
-		} else if err == services.ErrActiveGameExists {
+		} else if err == common.ErrActiveGameExists {
 			HandleError(c, http.StatusConflict, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to join game room")
@@ -51,9 +52,7 @@ func LeaveGameRoom(c *gin.Context) {
 
 	err = services.LeaveGameRoom(request.UserID, roomID)
 	if err != nil {
-		if err == services.ErrGameRoomNotFound ||
-			err == services.ErrUserNotFound ||
-			err == services.ErrUserNotInSpecifiedRoom {
+		if err == common.ErrGameRoomNotFound || err == common.ErrUserNotFound || err == common.ErrUserNotInSpecifiedRoom {
 			HandleError(c, http.StatusNotFound, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to leave game room")

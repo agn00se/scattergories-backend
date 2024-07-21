@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"scattergories-backend/internal/client/ws/requests"
+	"scattergories-backend/internal/client/ws/responses"
 	"scattergories-backend/internal/models"
 	"scattergories-backend/internal/services"
 	"scattergories-backend/pkg/validators"
@@ -28,20 +29,18 @@ func startGame(client *Client, roomID uint, message []byte) {
 		sendError(client, "Invalid start_game request format")
 		return
 	}
-
-	// Validate the request using Gin's binding and validation
 	if err := validators.Validate.Struct(req); err != nil {
 		sendError(client, "Validation failed: "+err.Error())
 		return
 	}
 
 	// Start the game
-	response, err := services.CreateGame(roomID, req.UserID)
+	game, gameRoomConfig, gamePrompts, err := services.StartGame(roomID, req.UserID)
 	if err != nil {
 		sendError(client, err.Error())
 		return
 	}
-
+	response := responses.ToStartGameResponse(game, gameRoomConfig, gamePrompts)
 	sendResponse(client, response)
 
 	// Start the countdown
@@ -55,13 +54,12 @@ func submitAnswer(client *Client, message []byte) {
 		sendError(client, "Invalid submit_answer request format")
 		return
 	}
-
 	if err := validators.Validate.Struct(req); err != nil {
 		sendError(client, "Validation failed: "+err.Error())
 		return
 	}
 
-	answer := models.Answer{
+	answer := &models.Answer{
 		Answer:       req.Answer,
 		PlayerID:     req.PlayerID,
 		GamePromptID: req.GamePromptID,
@@ -84,24 +82,24 @@ func updateGameConfig(client *Client, roomID uint, message []byte) {
 		sendError(client, "Invalid submit_answer request format")
 		return
 	}
-
 	if err := validators.Validate.Struct(req); err != nil {
 		sendError(client, "Validation failed: "+err.Error())
 		return
 	}
 
-	config := models.GameRoomConfig{
+	config := &models.GameRoomConfig{
 		GameRoomID:      roomID,
 		TimeLimit:       req.TimeLimit,
 		NumberOfPrompts: req.NumberOfPrompts,
 		Letter:          req.Letter,
 	}
 
-	response, err := services.UpdateGameConfig(config, req.UserID)
+	config, err := services.UpdateGameConfig(config, req.UserID)
 	if err != nil {
 		sendError(client, err.Error())
 		return
 	}
 
+	response := responses.ToUpdateGameConfigResponse(config)
 	sendResponse(client, response)
 }

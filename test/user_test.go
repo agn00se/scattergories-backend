@@ -1,7 +1,6 @@
 package test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -120,7 +119,7 @@ func TestCreateUserShouldCreateUser(t *testing.T) {
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
-	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Equal(t, http.StatusCreated, resp.Code)
 
 	var returnedUser responses.UserResponse
 	err := json.Unmarshal(resp.Body.Bytes(), &returnedUser)
@@ -128,113 +127,6 @@ func TestCreateUserShouldCreateUser(t *testing.T) {
 	assert.Contains(t, returnedUser.Name, "Guest")
 
 	verifyUserByGet(t, returnedUser)
-}
-
-func TestUpdateUserShouldUpdateUser(t *testing.T) {
-	ResetDatabase()
-
-	// Create a test user
-	user := models.User{Name: "testuser"}
-	config.DB.Create(&user)
-
-	// Create a test game room
-	gameRoom := models.GameRoom{RoomCode: "testroom", IsPrivate: false, HostID: &user.ID}
-	config.DB.Create(&gameRoom)
-
-	// Update user request
-	updatePayload := map[string]interface{}{"name": "updateduser", "room_id": gameRoom.ID}
-	updateJSON, _ := json.Marshal(updatePayload)
-
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/users/%d", user.ID), bytes.NewBuffer(updateJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusOK, resp.Code)
-
-	var returnedUser responses.UserResponse
-	err := json.Unmarshal(resp.Body.Bytes(), &returnedUser)
-	assert.NoError(t, err)
-	assert.Equal(t, "updateduser", returnedUser.Name)
-	assert.Equal(t, gameRoom.ID, *returnedUser.GameRoomID)
-
-	verifyUserByGet(t, returnedUser)
-}
-
-func TestUpdateUserShouldReturnUserNotFound(t *testing.T) {
-	ResetDatabase()
-
-	// Update user request with a non-existent user
-	updatePayload := map[string]string{"name": "updateduser"}
-	updateJSON, _ := json.Marshal(updatePayload)
-
-	nonExistentUserID := uint(999)
-
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/users/%d", nonExistentUserID), bytes.NewBuffer(updateJSON))
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusNotFound, resp.Code)
-
-	var response map[string]string
-	err := json.Unmarshal(resp.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, ErrUserNotFound, response["error"])
-}
-
-func TestUpdateUserShouldReturnIDInvalid(t *testing.T) {
-	ResetDatabase()
-
-	// Update user request with invalid ID format
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/users/%s", "invalidIDFormat"), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusBadRequest, resp.Code)
-
-	var response map[string]string
-	err := json.Unmarshal(resp.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, ErrInvalidUserID, response["error"])
-}
-
-func TestUpdateUserShouldFailValidationGivenNoName(t *testing.T) {
-	ResetDatabase()
-
-	// Update user request without the required name field
-	gameRoomID := uint(2)
-	updatePayload := map[string]uint{"room_id": gameRoomID}
-	updateJSON, _ := json.Marshal(updatePayload)
-
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/users/%d", 1), bytes.NewBuffer(updateJSON))
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusBadRequest, resp.Code)
-
-	var response map[string]string
-	err := json.Unmarshal(resp.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, "Key: 'UserRequest.Name' Error:Field validation for 'Name' failed on the 'required' tag", response["error"])
-}
-
-func TestUpdateUserShouldFailValidationGivenBlankName(t *testing.T) {
-	ResetDatabase()
-
-	// Update user request without the required name field
-	updatePayload := map[string]string{"name": "   "}
-	updateJSON, _ := json.Marshal(updatePayload)
-
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/users/%d", 1), bytes.NewBuffer(updateJSON))
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusBadRequest, resp.Code)
-
-	var response map[string]string
-	err := json.Unmarshal(resp.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, "Key: 'UserRequest.Name' Error:Field validation for 'Name' failed on the 'not_blank' tag", response["error"])
 }
 
 func TestDeleteUserShouldDeleteUser(t *testing.T) {
@@ -248,7 +140,7 @@ func TestDeleteUserShouldDeleteUser(t *testing.T) {
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
-	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Equal(t, http.StatusNoContent, resp.Code)
 
 	// Check that the user is deleted
 	var deletedUser models.User

@@ -12,6 +12,4 @@ type Game struct {
 	Status     GameStatus `gorm:"type:varchar(20);not null" json:"status"`
 	StartTime  time.Time  `json:"start_time"`
 	EndTime    time.Time  `json:"end_time"`
-
-	// Room      GameRoom   `gorm:"foreignKey:RoomID" json:"-"`
 }

@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"log"
+	"scattergories-backend/internal/client/ws/responses"
 	"scattergories-backend/internal/services"
 	"time"
 
@@ -70,16 +71,20 @@ func (c *Client) writePump() {
 		select {
 		case message, ok := <-c.send:
 			if !ok {
+				// The channel is closed, so send a close message to the WebSocket
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
+			// Send a text message to the WebSocket
 			c.conn.WriteMessage(websocket.TextMessage, message)
 		case <-ticker.C:
+			// Send a ping message to keep the connection alive
 			c.conn.WriteMessage(websocket.PingMessage, nil)
 		}
 	}
 }
 
+// This logic can be moved to client-side
 func (c *Client) startCountdown(duration time.Duration, roomID uint) {
 	go func() {
 		time.Sleep(duration)
@@ -88,16 +93,12 @@ func (c *Client) startCountdown(duration time.Duration, roomID uint) {
 }
 
 func (c *Client) triggerWorkflow(roomID uint) {
-	data, err := services.LoadDataForRoom(roomID)
+	game, answers, err := services.LoadDataForRoom(roomID)
 	if err != nil {
 		sendError(c, "Error loading data")
 		return
 	}
 
-	response := map[string]interface{}{
-		"type": "countdown_complete",
-		"data": data,
-	}
-
+	response := responses.ToCountdownFinishResponse(game, answers)
 	sendResponse(c, response)
 }

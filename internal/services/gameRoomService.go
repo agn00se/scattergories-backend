@@ -1,113 +1,142 @@
 package services
 
 import (
-	"fmt"
-	"scattergories-backend/config"
+	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/repositories"
 	"scattergories-backend/pkg/utils"
-
-	"gorm.io/gorm"
+	"time"
 )
 
-func CreateGameRoom(hostID uint, isPrivate bool, passcode string) (models.GameRoom, error) {
+func CreateGameRoom(hostID uint, isPrivate bool, passcode string) (*models.GameRoom, error) {
 	// Verify that the host user exists
-	var host models.User
-	if err := config.DB.First(&host, hostID).Error; err != nil {
-		return models.GameRoom{}, ErrHostNotFound
+	host, err := GetUserByID(hostID)
+	if err != nil {
+		return nil, err
 	}
 
 	// Verify that the host user is not a host in another game room
-	var existingGameRoom models.GameRoom
-	if err := config.DB.Where("host_id = ?", hostID).First(&existingGameRoom).Error; err == nil {
-		return models.GameRoom{}, ErrUserIsAlreadyHostOfAnotherRoom
+	if err := VerifyHostNotInOtherRoom(hostID); err != nil {
+		return nil, err
 	}
 
-	gameRoom := models.GameRoom{
+	// Create Game Room in the database
+	gameRoom := &models.GameRoom{
 		RoomCode:  utils.GenerateRoomCode(),
 		HostID:    &hostID,
 		IsPrivate: isPrivate,
 		Passcode:  passcode,
 	}
-	if err := config.DB.Create(&gameRoom).Error; err != nil {
-		return gameRoom, err
+	if err := repositories.CreateGameRoom(gameRoom); err != nil {
+		return nil, err
 	}
 
 	// Update the user table with the associated game room id
 	host.GameRoomID = &gameRoom.ID
-	if err := config.DB.Save(&host).Error; err != nil {
-		return gameRoom, err
+	if err := UpdateUser(host); err != nil {
+		return nil, err
 	}
 
 	// Create default GameRoomConfig for the new GameRoom
 	if err := CreateDefaultGameRoomConfig(gameRoom.ID); err != nil {
-		return gameRoom, err
+		return nil, err
 	}
 
-	// Reload the room with the assoicated host
-	if err := config.DB.Preload("Host").First(&gameRoom, gameRoom.ID).Error; err != nil {
-		return gameRoom, err
+	// Reload the game room with the assoicated host
+	gameRoomResponse, err := GetGameRoomByID(gameRoom.ID)
+	if err != nil {
+		return nil, err
 	}
-	return gameRoom, nil
+	return gameRoomResponse, nil
 }
 
-func GetAllGameRooms() ([]models.GameRoom, error) {
-	var rooms []models.GameRoom
-	if err := config.DB.Preload("Host").Find(&rooms).Error; err != nil {
-		return rooms, err
-	}
-	return rooms, nil
+func GetAllGameRooms() ([]*models.GameRoom, error) {
+	return repositories.GetAllGameRooms()
 }
 
-func GetGameRoomByID(roomID uint) (models.GameRoom, error) {
-	var gameRoom models.GameRoom
-
-	// Eager Preload - tells GORM to load the associated Host object when querying for the GameRoom.
-	if err := config.DB.Preload("Host").First(&gameRoom, roomID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return gameRoom, ErrGameRoomNotFound
-		}
-		return gameRoom, err
-	}
-	return gameRoom, nil
+func GetGameRoomByID(roomID uint) (*models.GameRoom, error) {
+	return repositories.GetGameRoomByID(roomID)
 }
 
 func DeleteGameRoomByID(roomID uint) error {
-	var gameRoom models.GameRoom
-	if err := config.DB.First(&gameRoom, roomID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return ErrGameRoomNotFound
-		}
-		return err
-	}
-
-	if err := config.DB.Unscoped().Delete(&models.GameRoom{}, roomID).Error; err != nil {
-		return err
+	result := repositories.DeleteGameRoomByID(roomID)
+	if result.Error != nil {
+		return result.Error
 	}
 	return nil
 }
 
-func UpdateHost(roomID uint, newHostID uint) (models.GameRoom, error) {
-	var gameRoom models.GameRoom
-	if err := config.DB.First(&gameRoom, roomID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return gameRoom, ErrGameRoomNotFound
-		}
-		return gameRoom, err
+func UpdateHost(roomID uint, newHostID uint) (*models.GameRoom, error) {
+	// Get the game room
+	gameRoom, err := GetGameRoomByID(roomID)
+	if err != nil {
+		return nil, err
 	}
 
-	var existingGameRoom models.GameRoom
-	if err := config.DB.Where("host_id = ?", newHostID).First(&existingGameRoom).Error; err == nil {
-		return models.GameRoom{}, fmt.Errorf("user is already a host in another game room")
+	// Verify that the new host user exists
+	if _, err := GetUserByID(newHostID); err != nil {
+		return nil, err
 	}
 
+	// Verify that the host user is not a host in another game room
+	if err := VerifyHostNotInOtherRoom(newHostID); err != nil {
+		return nil, err
+	}
+
+	// Update host
 	gameRoom.HostID = &newHostID
-	if err := config.DB.Save(&gameRoom).Error; err != nil {
-		return gameRoom, err
+	repositories.UpdateGameRoom(gameRoom)
+
+	// Reload the game room with the assoicated host
+	gameRoomResponse, err := GetGameRoomByID(gameRoom.ID)
+	if err != nil {
+		return nil, err
+	}
+	return gameRoomResponse, nil
+}
+
+func LoadDataForRoom(roomID uint) (*models.Game, []*models.Answer, error) {
+	// Get the Ongoing game
+	game, err := GetOngoingGameInRoom(roomID)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	// Reload the room with the assoicated host
-	if err := config.DB.Preload("Host").First(&gameRoom, gameRoom.ID).Error; err != nil {
-		return gameRoom, err
+	// Set game status to Voting stage and update endtime
+	game.Status = models.GameStatusVoting
+	game.EndTime = time.Now()
+	if err := UpdateGame(game); err != nil {
+		return nil, nil, err
 	}
-	return gameRoom, nil
+
+	// Load answers with related Player and GamePrompt (including Prompt)
+	answers, err := GetAnswersByGameID(game.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return game, answers, nil
+}
+
+func VerifyGameRoomHost(roomID uint, userID uint, errorMessage error) error {
+	gameRoom, err := GetGameRoomByID(roomID)
+	if err != nil {
+		return err
+	}
+
+	if gameRoom.HostID != nil && *gameRoom.HostID != userID {
+		return errorMessage
+	}
+	return nil
+}
+
+func VerifyHostNotInOtherRoom(hostID uint) error {
+	_, err := repositories.GetGameRoomGivenHost(hostID)
+	if err != nil {
+		if err == common.ErrGameRoomWithGivenHostNotFound {
+			return nil
+		}
+		return err
+	}
+	return common.ErrUserIsAlreadyHostOfAnotherRoom
 }

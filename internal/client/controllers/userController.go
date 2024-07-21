@@ -3,8 +3,8 @@ package controllers
 import (
 	"net/http"
 
-	"scattergories-backend/internal/client/controllers/requests"
 	"scattergories-backend/internal/client/controllers/responses"
+	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +16,7 @@ func GetAllUsers(c *gin.Context) {
 		HandleError(c, http.StatusInternalServerError, "Failed to retrieve users")
 	}
 
-	var response []responses.UserResponse
+	var response []*responses.UserResponse
 	// _: The blank identifier _ is used to ignore the index of the slice or array.
 	for _, user := range users {
 		response = append(response, responses.ToUserResponse(user))
@@ -34,7 +34,7 @@ func GetUser(c *gin.Context) {
 
 	user, err := services.GetUserByID(id)
 	if err != nil {
-		if err == services.ErrUserNotFound {
+		if err == common.ErrUserNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to get user")
@@ -54,35 +54,7 @@ func CreateUser(c *gin.Context) {
 	}
 
 	response := responses.ToUserResponse(user)
-	c.JSON(http.StatusOK, response)
-}
-
-func UpdateUser(c *gin.Context) {
-	id, err := GetIDParam(c, "id")
-	if err != nil {
-		HandleError(c, http.StatusBadRequest, "Invalid user ID")
-		return
-	}
-
-	var request requests.UserRequest
-	// short-lived variables like err can be made local within the if statement
-	if err := c.ShouldBindJSON(&request); err != nil {
-		HandleError(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	user, err := services.UpdateUserByID(id, request.Name, request.GameRoomID)
-	if err != nil {
-		if err == services.ErrUserNotFound {
-			HandleError(c, http.StatusNotFound, err.Error())
-		} else {
-			HandleError(c, http.StatusInternalServerError, "Failed to update user")
-		}
-		return
-	}
-
-	response := responses.ToUserResponse(user)
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusCreated, response)
 }
 
 func DeleteUser(c *gin.Context) {
@@ -94,7 +66,7 @@ func DeleteUser(c *gin.Context) {
 
 	err = services.DeleteUserByID(id)
 	if err != nil {
-		if err == services.ErrUserNotFound {
+		if err == common.ErrUserNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to delete user")
@@ -104,5 +76,5 @@ func DeleteUser(c *gin.Context) {
 
 	// gin.H{} is a shortcut provided by Gin for map[string]interface{}.
 	// It is used to simplify the creation of JSON responses.
-	c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
+	c.JSON(http.StatusNoContent, gin.H{"message": "User deleted"})
 }

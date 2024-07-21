@@ -8,8 +8,8 @@ type UserResponse struct {
 	GameRoomID *uint  `json:"room_id,omitempty"`
 }
 
-func ToUserResponse(user models.User) UserResponse {
-	return UserResponse{
+func ToUserResponse(user *models.User) *UserResponse {
+	return &UserResponse{
 		ID:         user.ID,
 		Name:       user.Name,
 		GameRoomID: user.GameRoomID,
