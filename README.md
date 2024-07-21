@@ -9,8 +9,9 @@ The project is organized into the following directories:
 - **cmd/scattergories**: Contains the entry point of the application.
 - **config**: Contains configuration files and scripts.
 - **internal**: Contains the core application logic divided into several subdirectories:
-  - **models**: Defines the data models used in the application.
   - **client**: Contains client-specific logic, including controllers, routes, and WebSocket handling.
+  - **models**: Defines the data models used in the application.
+  - **repositories**: Contains the data access logic and repository patterns for interacting with the database.
   - **services**: Contains business logic and services used by the controllers.
 - **pkg**: Contains utility packages and custom validators.
 - **test**: Contains test files for unit and integration tests.
@@ -60,8 +61,7 @@ The application exposes several API endpoints to manage users, game rooms, and g
 - **User Management**:
   - `GET /users`: Retrieve all users.
   - `GET /users/:id`: Retrieve a single user by ID.
-  - `POST /users`: Create a new user.
-  - `PUT /users/:id`: Update an existing user.
+  - `POST /users`: Create a guest user.
   - `DELETE /users/:id`: Delete a user by ID.
 
 - **Game Room Management**:
@@ -70,14 +70,14 @@ The application exposes several API endpoints to manage users, game rooms, and g
   - `POST /game-rooms`: Create a new game room.
   - `DELETE /game-rooms/:room_id`: Delete a game room by ID.
   - `PUT /game-rooms/:room_id/update-host`: Update the host of a game room.
-  - `POST /game-rooms/:room_id/join`: Join a game room.
-  - `POST /game-rooms/:room_id/leave`: Leave a game room.
+  - `PUT /game-rooms/:room_id/join`: Join a game room.
+  - `PUT /game-rooms/:room_id/leave`: Leave a game room.
 
 ### WebSocket Endpoints
 
-The application also supports WebSocket connections for real-time communication. Here are some key WebSocket endpoints:
+The application also supports WebSocket connections for real-time communication:
 
-- `GET /ws/:room_id`: Handle WebSocket connections for a game room.
+- `/ws/:room_id`: Establish a WebSocket connection for a game room.
 
 ## Testing
 
