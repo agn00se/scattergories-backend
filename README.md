@@ -77,7 +77,14 @@ The application exposes several API endpoints to manage users, game rooms, and g
 
 The application also supports WebSocket connections for real-time communication:
 
-- `/ws/:room_id`: Establish a WebSocket connection for a game room.
+- `/ws/:room_id`: Establish a WebSocket connection for a game room. This connection allows clients to send and receive real-time updates and requests related to the game. The server will broadcast responses to all connected clients in the room.
+    - `start_game_request`: Initiate the start of a game.
+    - `end_game_request`: End the current game.
+    - `submit_answer_request`: Submit an answer for a game prompt.
+    - `update_game_config_request`: Update the configuration settings of the game.
+    - `countdown_finish_response`: Return game-related information when the countdown finishes.
+
+This setup ensures a responsive and interactive gaming experience for all connected clients by leveraging WebSocket connections for real-time communication and updates.
 
 ## Testing
 
