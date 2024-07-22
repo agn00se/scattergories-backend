@@ -69,7 +69,6 @@ The application exposes several API endpoints to manage users, game rooms, and g
   - `GET /game-rooms/:room_id`: Retrieve a single game room by ID.
   - `POST /game-rooms`: Create a new game room.
   - `DELETE /game-rooms/:room_id`: Delete a game room by ID.
-  - `PUT /game-rooms/:room_id/update-host`: Update the host of a game room.
   - `PUT /game-rooms/:room_id/join`: Join a game room.
   - `PUT /game-rooms/:room_id/leave`: Leave a game room.
 

@@ -88,32 +88,3 @@ func DeleteGameRoom(c *gin.Context) {
 
 	c.JSON(http.StatusNoContent, gin.H{"message": "Room deleted"})
 }
-
-func UpdateHost(c *gin.Context) {
-	id, err := GetIDParam(c, "room_id")
-	if err != nil {
-		HandleError(c, http.StatusBadRequest, "Invalid room ID")
-		return
-	}
-
-	var request requests.UpdateHostRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		HandleError(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	gameRoom, err := services.UpdateHost(id, request.NewHostID)
-	if err != nil {
-		if err == common.ErrGameRoomNotFound || err == common.ErrUserNotFound {
-			HandleError(c, http.StatusNotFound, err.Error())
-		} else if err == common.ErrUserIsAlreadyHostOfAnotherRoom {
-			HandleError(c, http.StatusConflict, err.Error())
-		} else {
-			HandleError(c, http.StatusInternalServerError, "Failed to update host")
-		}
-		return
-	}
-
-	response := responses.ToGameRoomResponse(gameRoom)
-	c.JSON(http.StatusOK, response)
-}

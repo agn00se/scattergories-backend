@@ -54,6 +54,8 @@ func LeaveGameRoom(c *gin.Context) {
 	if err != nil {
 		if err == common.ErrGameRoomNotFound || err == common.ErrUserNotFound || err == common.ErrUserNotInSpecifiedRoom {
 			HandleError(c, http.StatusNotFound, err.Error())
+		} else if err == common.ErrUserIsAlreadyHostOfAnotherRoom {
+			HandleError(c, http.StatusConflict, err.Error())
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to leave game room")
 		}

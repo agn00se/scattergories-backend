@@ -5,7 +5,3 @@ type GameRoomRequest struct {
 	IsPrivate bool   `json:"is_private"`
 	Passcode  string `json:"passcode,omitempty" binding:"passcode_required_if_private"`
 }
-
-type UpdateHostRequest struct {
-	NewHostID uint `json:"new_host_id" binding:"required"`
-}

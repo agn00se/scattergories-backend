@@ -694,3 +694,4 @@ func TestLeaveGameRoomUserNotInSpecifiedRoom(t *testing.T) {
 // TestJoinGameRoom - reject if game room full
 // TestLeaveGameRoom - assign new host if host left
 // TestLeaveGameRoom - remove game room if all user left
+// TestDeleteGameRoom
