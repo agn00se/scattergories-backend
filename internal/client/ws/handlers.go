@@ -12,11 +12,13 @@ import (
 
 func HandleMessage(client *Client, roomID uint, messageType string, message []byte) {
 	switch messageType {
-	case "start_game":
+	case "start_game_request":
 		startGame(client, roomID, message)
-	case "submit_answer":
-		submitAnswer(client, message)
-	case "update_game_config":
+	case "end_game_request":
+		endGame(client, roomID, message)
+	case "submit_answer_request":
+		submitAnswer(client, roomID, message)
+	case "update_game_config_request":
 		updateGameConfig(client, roomID, message)
 	default:
 		sendError(client, "Unknown message type")
@@ -26,7 +28,7 @@ func HandleMessage(client *Client, roomID uint, messageType string, message []by
 func startGame(client *Client, roomID uint, message []byte) {
 	var req requests.StartGameRequest
 	if err := json.Unmarshal(message, &req); err != nil {
-		sendError(client, "Invalid start_game request format")
+		sendError(client, "Invalid start_game_request format")
 		return
 	}
 	if err := validators.Validate.Struct(req); err != nil {
@@ -48,10 +50,30 @@ func startGame(client *Client, roomID uint, message []byte) {
 	client.startCountdown(countdownDuration, roomID)
 }
 
-func submitAnswer(client *Client, message []byte) {
+func endGame(client *Client, roomID uint, message []byte) {
+	var req requests.EndGameRequest
+	if err := json.Unmarshal(message, &req); err != nil {
+		sendError(client, "Invalid end_game_request format")
+		return
+	}
+	if err := validators.Validate.Struct(req); err != nil {
+		sendError(client, "Validation failed: "+err.Error())
+		return
+	}
+
+	game, players, err := services.EndGame(roomID, req.GameID, req.UserID)
+	if err != nil {
+		sendError(client, err.Error())
+		return
+	}
+	response := responses.ToEndGameResponse(game, players)
+	sendResponse(client, response)
+}
+
+func submitAnswer(client *Client, roomID uint, message []byte) {
 	var req requests.SubmitAnswerRequest
 	if err := json.Unmarshal(message, &req); err != nil {
-		sendError(client, "Invalid submit_answer request format")
+		sendError(client, "Invalid submit_answer_request format")
 		return
 	}
 	if err := validators.Validate.Struct(req); err != nil {
@@ -65,7 +87,7 @@ func submitAnswer(client *Client, message []byte) {
 		GamePromptID: req.GamePromptID,
 	}
 
-	if err := services.CreateOrUpdateAnswer(answer); err != nil {
+	if err := services.CreateOrUpdateAnswer(roomID, answer); err != nil {
 		sendError(client, "Failed to save answer"+err.Error())
 		return
 	}
@@ -79,7 +101,7 @@ func submitAnswer(client *Client, message []byte) {
 func updateGameConfig(client *Client, roomID uint, message []byte) {
 	var req requests.UpdateGameConfigRequest
 	if err := json.Unmarshal(message, &req); err != nil {
-		sendError(client, "Invalid submit_answer request format")
+		sendError(client, "Invalid update_game_config_request format")
 		return
 	}
 	if err := validators.Validate.Struct(req); err != nil {

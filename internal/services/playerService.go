@@ -5,6 +5,10 @@ import (
 	"scattergories-backend/internal/repositories"
 )
 
+func GetPlayersByGameID(gameID uint) ([]*models.Player, error) {
+	return repositories.GetPlayersByGameID(gameID)
+}
+
 func CreatePlayersInGame(users []*models.User, gameID uint) error {
 	for _, user := range users {
 		if err := CreatePlayer(user.ID, gameID); err != nil {

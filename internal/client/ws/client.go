@@ -20,6 +20,12 @@ type Client struct {
 	send   chan []byte
 }
 
+const (
+	writeWait  = 10 * time.Second
+	pongWait   = 60 * time.Second
+	pingPeriod = (pongWait * 9) / 10
+)
+
 // Continuously reads messages from the WebSocket connection.
 // When a message is received, it is sent to the hub.broadcast channel.
 // If an error occurs or the connection is closed, the client is unregistered,
@@ -30,6 +36,9 @@ func (c *Client) readPump() {
 		c.conn.Close()
 		log.Printf("Client unregistered from room %d", c.roomID)
 	}()
+	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
@@ -62,24 +71,32 @@ func (c *Client) readPump() {
 // If the send channel is closed, it sends a close message to the WebSocket connection.
 // Sends a ping message every 54 seconds to keep the connection alive.
 func (c *Client) writePump() {
-	ticker := time.NewTicker(54 * time.Second)
+	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
 	}()
+	// Means while (true)
 	for {
 		select {
 		case message, ok := <-c.send:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The channel is closed, so send a close message to the WebSocket
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 			// Send a text message to the WebSocket
-			c.conn.WriteMessage(websocket.TextMessage, message)
+			if err := c.conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				return
+			}
 		case <-ticker.C:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+
 			// Send a ping message to keep the connection alive
-			c.conn.WriteMessage(websocket.PingMessage, nil)
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
 		}
 	}
 }

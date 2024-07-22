@@ -49,6 +49,8 @@ func UpdateGameRoom(gameRoom *models.GameRoom) error {
 }
 
 func DeleteGameRoomByID(roomID uint) *gorm.DB {
+	// Delete game room should also delete on cascade any associated
+	// game, player, game prompt, game config, and answer from the database
 	result := config.DB.Unscoped().Delete(&models.GameRoom{}, roomID)
 	if result.Error != nil {
 		return result

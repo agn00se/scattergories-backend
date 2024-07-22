@@ -690,3 +690,7 @@ func TestLeaveGameRoomUserNotInSpecifiedRoom(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, ErrUserNotInSpecifiedRoom, response["error"])
 }
+
+// TestJoinGameRoom - reject if game room full
+// TestLeaveGameRoom - assign new host if host left
+// TestLeaveGameRoom - remove game room if all user left

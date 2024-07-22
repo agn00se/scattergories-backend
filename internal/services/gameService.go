@@ -10,6 +10,10 @@ import (
 	"gorm.io/gorm"
 )
 
+func GetGameByID(gameID uint) (*models.Game, error) {
+	return repositories.GetGameByID(gameID)
+}
+
 func StartGame(roomID uint, userID uint) (*models.Game, *models.GameRoomConfig, []*models.GamePrompt, error) {
 	// Verify host
 	if err := VerifyGameRoomHost(roomID, userID, common.ErrStartGameNotHost); err != nil {
@@ -64,40 +68,29 @@ func UpdateGame(game *models.Game) error {
 	return repositories.UpdateGame(game)
 }
 
-// todo
-// func EndGame(req *models.EndGameRequest) (*responses.EndGameResponse, error) {
-//     if err := ValidateGameRoomHost(req.RoomID, req.UserID); err != nil {
-//         return nil, err
-//     }
+func EndGame(roomID uint, gameID uint, userID uint) (*models.Game, []*models.Player, error) {
+	// Verify host
+	if err := VerifyGameRoomHost(roomID, userID, common.ErrEndGameNotHost); err != nil {
+		return nil, nil, err
+	}
 
-//     game, err := GetGameByID(req.GameID)
-//     if err != nil {
-//         return nil, err
-//     }
+	// Find the game, set status to completed, and update the end time
+	game, err := GetGameByID(gameID)
+	if err != nil {
+		return nil, nil, err
+	}
+	game.Status = models.GameStatusCompleted
+	game.EndTime = time.Now()
+	UpdateGame(game)
 
-//     game.Status = models.GameStatusCompleted
-//     game.EndTime = time.Now()
-//     if err := config.DB.Save(game).Error; err != nil {
-//         return nil, err
-//     }
+	// Calculate final scores
+	players, err := GetPlayersByGameID(gameID)
+	if err != nil {
+		return nil, nil, err
+	}
 
-//     // Calculate final scores
-//     players, err := GetPlayersByGameID(req.GameID)
-//     if err != nil {
-//         return nil, err
-// 	}
-
-//     response := &responses.EndGameResponse{
-//         Game:    responses.ToGameResponse(game),
-//         Players: make([]responses.PlayerResponse, len(players)),
-//     }
-
-//     for i, player := range players {
-//         response.Players[i] = responses.ToPlayerResponse(&player)
-//     }
-
-//     return response, nil
-// }
+	return game, players, nil
+}
 
 func VerifyNoActiveGameInRoom(roomID uint) error {
 	_, err := repositories.GetGameByRoomIDAndStatus(roomID, string(models.GameStatusOngoing), string(models.GameStatusVoting))

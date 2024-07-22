@@ -15,3 +15,11 @@ func ToPlayerResponse(player *models.Player) *PlayerResponse {
 		Score:  player.Score,
 	}
 }
+
+func ToPlayersResponse(players []*models.Player) []*PlayerResponse {
+	responsePlayers := make([]*PlayerResponse, len(players))
+	for i, player := range players {
+		responsePlayers[i] = ToPlayerResponse(player)
+	}
+	return responsePlayers
+}

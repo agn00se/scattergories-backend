@@ -62,8 +62,10 @@ func dropTables() {
 	config.DB.Migrator().DropTable(&models.Player{})
 	config.DB.Migrator().DropTable(&models.GamePrompt{})
 	config.DB.Migrator().DropTable(&models.Answer{})
+	config.DB.Migrator().DropTable(&models.GameRoomConfig{})
+	config.DB.Migrator().DropTable(&models.Prompt{})
 }
 
 func migrateTables() {
-	config.DB.AutoMigrate(&models.GameRoom{}, &models.User{}, &models.Game{}, &models.Player{}, &models.GamePrompt{}, &models.Answer{})
+	config.DB.AutoMigrate(&models.GameRoom{}, &models.User{}, &models.Game{}, &models.Player{}, &models.GameRoomConfig{}, &models.Prompt{}, &models.GamePrompt{}, &models.Answer{})
 }

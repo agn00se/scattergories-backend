@@ -4,6 +4,8 @@ import (
 	"scattergories-backend/internal/common"
 )
 
+var roomCapacity = 6
+
 func JoinGameRoom(userID uint, roomID uint) error {
 	// Verify game room exists
 	_, err := GetGameRoomByID(roomID)
@@ -22,7 +24,14 @@ func JoinGameRoom(userID uint, roomID uint) error {
 		return err
 	}
 
-	// todo: user limitation - 6 people max
+	// Verify game room not full
+	usersInRoom, err := GetUsersByGameRoomID(roomID)
+	if err != nil {
+		return err
+	}
+	if len(usersInRoom) >= roomCapacity {
+		return common.ErrGameRoomFull
+	}
 
 	// Update the associated game room in the user table
 	user.GameRoomID = &roomID
@@ -31,7 +40,7 @@ func JoinGameRoom(userID uint, roomID uint) error {
 
 func LeaveGameRoom(userID uint, roomID uint) error {
 	// Verify game room exists
-	_, err := GetGameRoomByID(roomID)
+	gameRoom, err := GetGameRoomByID(roomID)
 	if err != nil {
 		return err
 	}
@@ -42,17 +51,38 @@ func LeaveGameRoom(userID uint, roomID uint) error {
 		return err
 	}
 
-	// Verify user is in the specified game room and remove
+	// Verify user is in the specified game room and remove game room association
 	if user.GameRoomID != nil && *user.GameRoomID == roomID {
 		user.GameRoomID = nil
 	} else {
 		return common.ErrUserNotInSpecifiedRoom
 	}
 
-	// todo: If host leaves room, assign a new host randomly
+	// Update user record
+	if err := UpdateUser(user); err != nil {
+		return err
+	}
 
-	// todo: If last user leaves room, delete game room
+	// Check if there are any users left in the game room
+	usersInRoom, err := GetUsersByGameRoomID(roomID)
+	if err != nil {
+		return err
+	}
 
-	// Update the user record
-	return UpdateUser(user)
+	// If no users left, delete the game room
+	if len(usersInRoom) == 0 {
+		if err := DeleteGameRoomByID(roomID); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// Check if the user is the host and assign a new host if needed
+	if gameRoom.HostID != nil && *gameRoom.HostID == userID {
+		if _, err := UpdateHost(roomID, usersInRoom[0].ID); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
