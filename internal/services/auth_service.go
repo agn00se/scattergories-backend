@@ -4,9 +4,9 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
-	"fmt"
 	"log"
 	"scattergories-backend/internal/common"
+	"scattergories-backend/internal/models"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -25,35 +25,67 @@ var params = ArgonParams{
 	KeyLen:  32,
 }
 
-func Login(email string, password string) error {
-	user, err := getUserByEmail(email)
-	if err != nil {
-		return common.ErrLoginFailed
+func Register(userType string, name string, email string, password string) (*models.User, error) {
+	var user *models.User
+	var err error
+
+	if userType == string(models.UserTypeGuest) {
+		user, err = CreateGuestUser()
+	} else {
+		user, err = CreateRegisteredUser(name, email, password)
 	}
 
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func Login(email string, password string) (string, string, error) {
+	// Retrieve the user from the database
+	user, err := getUserByEmail(email)
+	if err != nil {
+		return "", "", common.ErrLoginFailed
+	}
+
+	// Decode the stored salt
 	salt, err := base64.StdEncoding.DecodeString(*user.Salt)
 	if err != nil {
 		log.Println("Error decoding stored salt:", err)
-		return fmt.Errorf("login failed")
+		return "", "", common.ErrLoginFailed
 	}
 
-	// Compute the hash of the provided password using the stored salt
+	// Compute the hash of the provided password using the decoded salt
 	computedHash := computeHash(password, salt)
 
 	// Compare the computed hash with the stored hash
 	// Use constant-time comparison to prevent timing attacks
 	if subtle.ConstantTimeCompare([]byte(computedHash), []byte(*user.PasswordHash)) != 1 {
-		return common.ErrLoginFailed
+		return "", "", common.ErrLoginFailed
 	}
 
-	return nil
+	// Generate access token for both guest and registered users
+	accessToken, err := generateJWT(user.ID, user.Type)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Generate refresh token for registered users
+	var refreshToken string
+	if user.Type == models.UserTypeRegistered {
+		refreshToken, err = generateRefreshToken(user.ID)
+		if err != nil {
+			return "", "", err
+		}
+	}
+
+	return accessToken, refreshToken, nil
 }
 
 func generateHash(password string) (string, string, error) {
 	// Generate salt
 	salt := make([]byte, 16)
 	if _, err := rand.Read(salt); err != nil {
-		fmt.Println("Failed to generate salt for password hashing")
 		return "", "", err
 	}
 

@@ -2,6 +2,7 @@ package routes
 
 import (
 	"scattergories-backend/internal/client/controllers"
+	"scattergories-backend/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,15 +10,18 @@ import (
 func RegisterUserRoutes(router *gin.Engine) {
 	userRoutes := router.Group("/users")
 	{
-		userRoutes.GET("", controllers.GetAllUsers)
-		userRoutes.GET("/:id", controllers.GetUser)
-		userRoutes.POST("", controllers.CreateUser)
-		// userRoutes.PUT("/:id", controllers.UpdateUser)
-		userRoutes.DELETE("/:id", controllers.DeleteUser)
+		userRoutes.POST("", controllers.CreateAccount) // Public route
+
+		userRoutes.Use(middleware.JWTAuthMiddleware())
+		{
+			userRoutes.GET("", controllers.GetAllUsers)
+			userRoutes.GET("/:id", controllers.GetUser)
+			// userRoutes.PUT("/:id", controllers.UpdateUser)
+			userRoutes.DELETE("/:id", controllers.DeleteAccount)
+		}
 	}
 
-	loginRoutes := router.Group("/login")
-	{
-		loginRoutes.POST("", controllers.Login)
-	}
+	router.POST("/login", controllers.Login) // Public route
+	router.POST("/logout", middleware.JWTAuthMiddleware(), controllers.Logout)
+	router.POST("/refresh-token", controllers.ExchangeToken) // Public route
 }

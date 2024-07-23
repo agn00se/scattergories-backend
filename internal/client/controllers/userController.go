@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"net/http"
+	"strings"
 
 	"scattergories-backend/internal/client/controllers/requests"
 	"scattergories-backend/internal/client/controllers/responses"
 	"scattergories-backend/internal/common"
-	"scattergories-backend/internal/models"
 	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -48,25 +48,18 @@ func GetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func CreateUser(c *gin.Context) {
+func CreateAccount(c *gin.Context) {
 	var request requests.UserRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		HandleError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	var err error
-	var user *models.User
-
-	if request.Type == string(models.UserTypeGuest) {
-		user, err = services.CreateGuestUser()
-	} else if request.Type == string(models.UserTypeRegistered) {
-		user, err = services.CreateRegisteredUser(*request.Name, *request.Email, *request.Password)
-	}
-
+	user, err := services.Register(request.Type, *request.Name, *request.Email, *request.Password)
 	if err != nil {
 		if err == common.ErrEmailAlreadyUsed {
 			HandleError(c, http.StatusConflict, err.Error())
+			return
 		}
 		HandleError(c, http.StatusInternalServerError, "Failed to create user")
 		return
@@ -76,7 +69,7 @@ func CreateUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func DeleteUser(c *gin.Context) {
+func DeleteAccount(c *gin.Context) {
 	id, err := GetIDParam(c, "id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid user ID")
@@ -90,6 +83,14 @@ func DeleteUser(c *gin.Context) {
 		} else {
 			HandleError(c, http.StatusInternalServerError, "Failed to delete user")
 		}
+		return
+	}
+
+	tokenString := c.GetHeader("Authorization")
+	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+
+	if err := services.InvalidateToken(tokenString); err != nil {
+		HandleError(c, http.StatusInternalServerError, "Failed to invalidate token")
 		return
 	}
 

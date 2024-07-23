@@ -2,18 +2,22 @@ package config
 
 import (
 	"bufio"
+	"context"
 	"log"
 	"os"
 	"scattergories-backend/internal/models"
+	"strconv"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
+var RedisClient *redis.Client
 
 func ConnectDB() {
 	err := godotenv.Load()
@@ -38,6 +42,22 @@ func ConnectDB() {
 	err = DB.AutoMigrate(&models.GameRoom{}, &models.User{}, &models.Game{}, &models.Player{}, &models.GameRoomConfig{}, &models.Prompt{}, &models.GamePrompt{}, &models.Answer{})
 	if err != nil {
 		log.Fatal("Failed to migrate database schema:", err)
+	}
+}
+
+func InitRedis() {
+	db, err := strconv.Atoi(os.Getenv("REDIS_DB"))
+	if err != nil {
+		panic("Invalid REDIS_DB value")
+	}
+	RedisClient = redis.NewClient(&redis.Options{
+		Addr:     os.Getenv("REDIS_ADDR"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       db,
+	})
+	_, err = RedisClient.Ping(context.Background()).Result()
+	if err != nil {
+		panic("Could not connect to Redis: " + err.Error())
 	}
 }
 

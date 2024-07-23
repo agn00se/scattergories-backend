@@ -14,6 +14,7 @@ func main() {
 	validators.RegisterCustomValidators()
 
 	config.ConnectDB()
+	config.InitRedis()
 	config.LoadPrompts()
 
 	go ws.HubInstance.Run()
