@@ -16,7 +16,7 @@ func CreateGameRoom(hostID uint, isPrivate bool, passcode string) (*models.GameR
 	}
 
 	// Verify that the host user is not a host in another game room
-	if err := VerifyHostNotInOtherRoom(hostID); err != nil {
+	if err := verifyHostNotInOtherRoom(hostID); err != nil {
 		return nil, err
 	}
 
@@ -33,12 +33,12 @@ func CreateGameRoom(hostID uint, isPrivate bool, passcode string) (*models.GameR
 
 	// Update the user table with the associated game room id
 	host.GameRoomID = &gameRoom.ID
-	if err := UpdateUser(host); err != nil {
+	if err := updateUser(host); err != nil {
 		return nil, err
 	}
 
 	// Create default GameRoomConfig for the new GameRoom
-	if err := CreateDefaultGameRoomConfig(gameRoom.ID); err != nil {
+	if err := createDefaultGameRoomConfig(gameRoom.ID); err != nil {
 		return nil, err
 	}
 
@@ -66,7 +66,30 @@ func DeleteGameRoomByID(roomID uint) error {
 	return nil
 }
 
-func UpdateHost(roomID uint, newHostID uint) (*models.GameRoom, error) {
+func LoadDataForRoom(roomID uint) (*models.Game, []*models.Answer, error) {
+	// Get the Ongoing game
+	game, err := getOngoingGameInRoom(roomID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Set game status to Voting stage and update endtime
+	game.Status = models.GameStatusVoting
+	game.EndTime = time.Now()
+	if err := updateGame(game); err != nil {
+		return nil, nil, err
+	}
+
+	// Load answers with related Player and GamePrompt (including Prompt)
+	answers, err := getAnswersByGameID(game.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return game, answers, nil
+}
+
+func updateHost(roomID uint, newHostID uint) (*models.GameRoom, error) {
 	// Get the game room
 	gameRoom, err := GetGameRoomByID(roomID)
 	if err != nil {
@@ -79,7 +102,7 @@ func UpdateHost(roomID uint, newHostID uint) (*models.GameRoom, error) {
 	}
 
 	// Verify that the host user is not a host in another game room
-	if err := VerifyHostNotInOtherRoom(newHostID); err != nil {
+	if err := verifyHostNotInOtherRoom(newHostID); err != nil {
 		return nil, err
 	}
 
@@ -95,30 +118,7 @@ func UpdateHost(roomID uint, newHostID uint) (*models.GameRoom, error) {
 	return gameRoomResponse, nil
 }
 
-func LoadDataForRoom(roomID uint) (*models.Game, []*models.Answer, error) {
-	// Get the Ongoing game
-	game, err := GetOngoingGameInRoom(roomID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Set game status to Voting stage and update endtime
-	game.Status = models.GameStatusVoting
-	game.EndTime = time.Now()
-	if err := UpdateGame(game); err != nil {
-		return nil, nil, err
-	}
-
-	// Load answers with related Player and GamePrompt (including Prompt)
-	answers, err := GetAnswersByGameID(game.ID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return game, answers, nil
-}
-
-func VerifyGameRoomHost(roomID uint, userID uint, errorMessage error) error {
+func verifyGameRoomHost(roomID uint, userID uint, errorMessage error) error {
 	gameRoom, err := GetGameRoomByID(roomID)
 	if err != nil {
 		return err
@@ -130,7 +130,7 @@ func VerifyGameRoomHost(roomID uint, userID uint, errorMessage error) error {
 	return nil
 }
 
-func VerifyHostNotInOtherRoom(hostID uint) error {
+func verifyHostNotInOtherRoom(hostID uint) error {
 	_, err := repositories.GetGameRoomGivenHost(hostID)
 	if err != nil {
 		if err == common.ErrGameRoomWithGivenHostNotFound {

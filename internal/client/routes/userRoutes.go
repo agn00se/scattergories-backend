@@ -15,4 +15,9 @@ func RegisterUserRoutes(router *gin.Engine) {
 		// userRoutes.PUT("/:id", controllers.UpdateUser)
 		userRoutes.DELETE("/:id", controllers.DeleteUser)
 	}
+
+	loginRoutes := router.Group("/login")
+	{
+		loginRoutes.POST("", controllers.Login)
+	}
 }

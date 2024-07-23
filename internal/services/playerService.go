@@ -5,20 +5,20 @@ import (
 	"scattergories-backend/internal/repositories"
 )
 
-func GetPlayersByGameID(gameID uint) ([]*models.Player, error) {
+func getPlayersByGameID(gameID uint) ([]*models.Player, error) {
 	return repositories.GetPlayersByGameID(gameID)
 }
 
-func CreatePlayersInGame(users []*models.User, gameID uint) error {
+func createPlayersInGame(users []*models.User, gameID uint) error {
 	for _, user := range users {
-		if err := CreatePlayer(user.ID, gameID); err != nil {
+		if err := createPlayer(user.ID, gameID); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func CreatePlayer(userID uint, gameID uint) error {
+func createPlayer(userID uint, gameID uint) error {
 	gamePlayer := &models.Player{
 		UserID: userID,
 		GameID: gameID,

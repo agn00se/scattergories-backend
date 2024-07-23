@@ -6,7 +6,7 @@ import (
 	"scattergories-backend/internal/repositories"
 )
 
-func GetRandomPromptsGivenLimit(numberOfPrompts int) ([]*models.Prompt, error) {
+func getRandomPromptsGivenLimit(numberOfPrompts int) ([]*models.Prompt, error) {
 	prompts, err := repositories.GetRandomPromptsGivenLimit(numberOfPrompts)
 	if err != nil {
 		return nil, err

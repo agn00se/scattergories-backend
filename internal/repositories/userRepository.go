@@ -19,6 +19,17 @@ func GetUserByID(id uint) (*models.User, error) {
 	return &user, nil
 }
 
+func GetUserByEmail(email string) (*models.User, error) {
+	var user models.User
+	if err := config.DB.Where("email = ?", email).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, common.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
 func GetUsersByGameRoomID(roomID uint) ([]*models.User, error) {
 	var users []*models.User
 	if err := config.DB.Where("game_room_id = ?", roomID).Find(&users).Error; err != nil {

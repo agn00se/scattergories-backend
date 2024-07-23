@@ -13,6 +13,7 @@ This directory contains client-specific logic for handling HTTP requests and Web
 The controllers in this directory are responsible for handling HTTP REST API requests. These APIs are used for user management and pre-game setup.
 
 - **userController.go**: Contains handlers for user-related endpoints.
+- **authController.go**: Contains handlers for auth-related endpoints.
 - **gameRoomJoinController.go**: Contains handlers for joining and leaving game rooms.
 - **gameRoomController.go**: Contains handlers for game room-related endpoints.
 - **helpers.go**: Contains helper functions used by the controllers.

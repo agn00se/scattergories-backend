@@ -8,13 +8,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func GetAnswersByGameID(gameID uint) ([]*models.Answer, error) {
-	return repositories.GetAnswersByGameID(gameID)
-}
-
 func CreateOrUpdateAnswer(roomID uint, answer *models.Answer) error {
 	// Verify player submitting the answer is in the game room
-	if err := VerifyPlayerInGameRoom(roomID, answer.PlayerID); err != nil {
+	if err := verifyPlayerInGameRoom(roomID, answer.PlayerID); err != nil {
 		return err
 	}
 
@@ -29,7 +25,11 @@ func CreateOrUpdateAnswer(roomID uint, answer *models.Answer) error {
 	return repositories.CreateAnswer(answer)
 }
 
-func VerifyPlayerInGameRoom(roomID uint, playerID uint) error {
+func getAnswersByGameID(gameID uint) ([]*models.Answer, error) {
+	return repositories.GetAnswersByGameID(gameID)
+}
+
+func verifyPlayerInGameRoom(roomID uint, playerID uint) error {
 	player, err := repositories.GetPlayerByID(playerID)
 	if err != nil {
 		return err

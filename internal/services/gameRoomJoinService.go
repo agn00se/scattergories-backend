@@ -14,7 +14,7 @@ func JoinGameRoom(userID uint, roomID uint) error {
 	}
 
 	// Verify no game at the Ongoing or Voting stage
-	if err := VerifyNoActiveGameInRoom(roomID); err != nil {
+	if err := verifyNoActiveGameInRoom(roomID); err != nil {
 		return err
 	}
 
@@ -25,7 +25,7 @@ func JoinGameRoom(userID uint, roomID uint) error {
 	}
 
 	// Verify game room not full
-	usersInRoom, err := GetUsersByGameRoomID(roomID)
+	usersInRoom, err := getUsersByGameRoomID(roomID)
 	if err != nil {
 		return err
 	}
@@ -35,7 +35,7 @@ func JoinGameRoom(userID uint, roomID uint) error {
 
 	// Update the associated game room in the user table
 	user.GameRoomID = &roomID
-	return UpdateUser(user)
+	return updateUser(user)
 }
 
 func LeaveGameRoom(userID uint, roomID uint) error {
@@ -59,12 +59,12 @@ func LeaveGameRoom(userID uint, roomID uint) error {
 	}
 
 	// Update user record
-	if err := UpdateUser(user); err != nil {
+	if err := updateUser(user); err != nil {
 		return err
 	}
 
 	// Check if there are any users left in the game room
-	usersInRoom, err := GetUsersByGameRoomID(roomID)
+	usersInRoom, err := getUsersByGameRoomID(roomID)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func LeaveGameRoom(userID uint, roomID uint) error {
 
 	// Check if the user is the host and assign a new host if needed
 	if gameRoom.HostID != nil && *gameRoom.HostID == userID {
-		if _, err := UpdateHost(roomID, usersInRoom[0].ID); err != nil {
+		if _, err := updateHost(roomID, usersInRoom[0].ID); err != nil {
 			return err
 		}
 	}

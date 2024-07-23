@@ -13,30 +13,12 @@ var (
 	defaultNumberOfPrompts = 10
 )
 
-func GetGameRoomConfigByRoomID(roomID uint) (*models.GameRoomConfig, error) {
-	return repositories.GetGameRoomConfigByRoomID(roomID)
-}
-
-func CreateDefaultGameRoomConfig(gameRoomID uint) error {
-	gameRoomConfig := &models.GameRoomConfig{
-		GameRoomID:      gameRoomID,
-		TimeLimit:       defaultTimeLimit,
-		NumberOfPrompts: defaultNumberOfPrompts,
-		Letter:          utils.GetRandomLetter(),
-	}
-
-	if err := repositories.CreateGameRoomConfig(gameRoomConfig); err != nil {
-		return err
-	}
-	return nil
-}
-
 func UpdateGameConfig(request *models.GameRoomConfig, userID uint) (*models.GameRoomConfig, error) {
 	// Verify host
-	VerifyGameRoomHost(request.GameRoomID, userID, common.ErrUpdateConfigNotHost)
+	verifyGameRoomHost(request.GameRoomID, userID, common.ErrUpdateConfigNotHost)
 
 	// Fetch game room config
-	gameRoomConfig, err := GetGameRoomConfigByRoomID(request.GameRoomID)
+	gameRoomConfig, err := getGameRoomConfigByRoomID(request.GameRoomID)
 	if err != nil {
 		return nil, err
 	}
@@ -51,4 +33,22 @@ func UpdateGameConfig(request *models.GameRoomConfig, userID uint) (*models.Game
 	}
 
 	return gameRoomConfig, nil
+}
+
+func getGameRoomConfigByRoomID(roomID uint) (*models.GameRoomConfig, error) {
+	return repositories.GetGameRoomConfigByRoomID(roomID)
+}
+
+func createDefaultGameRoomConfig(gameRoomID uint) error {
+	gameRoomConfig := &models.GameRoomConfig{
+		GameRoomID:      gameRoomID,
+		TimeLimit:       defaultTimeLimit,
+		NumberOfPrompts: defaultNumberOfPrompts,
+		Letter:          utils.GetRandomLetter(),
+	}
+
+	if err := repositories.CreateGameRoomConfig(gameRoomConfig); err != nil {
+		return err
+	}
+	return nil
 }

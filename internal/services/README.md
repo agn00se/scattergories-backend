@@ -3,6 +3,7 @@
 This directory contains the business logic and services used by the controllers in the Scattergories Backend application.
 
 - `answerService.go`: Contains the business logic for managing answers.
+- `authService.go`: Contains the business logic for authenticating users.
 - `gamePromptService.go`: Contains the business logic for managing game prompts.
 - `gameRoomConfigService.go`: Contains the business logic for managing game room configurations.
 - `gameRoomJoinService.go`: Contains the business logic for joining and leaving game rooms.

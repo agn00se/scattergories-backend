@@ -3,8 +3,10 @@ package controllers
 import (
 	"net/http"
 
+	"scattergories-backend/internal/client/controllers/requests"
 	"scattergories-backend/internal/client/controllers/responses"
 	"scattergories-backend/internal/common"
+	"scattergories-backend/internal/models"
 	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -47,8 +49,25 @@ func GetUser(c *gin.Context) {
 }
 
 func CreateUser(c *gin.Context) {
-	user, err := services.CreateGuestUser()
+	var request requests.UserRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		HandleError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	var err error
+	var user *models.User
+
+	if request.Type == string(models.UserTypeGuest) {
+		user, err = services.CreateGuestUser()
+	} else if request.Type == string(models.UserTypeRegistered) {
+		user, err = services.CreateRegisteredUser(*request.Name, *request.Email, *request.Password)
+	}
+
 	if err != nil {
+		if err == common.ErrEmailAlreadyUsed {
+			HandleError(c, http.StatusConflict, err.Error())
+		}
 		HandleError(c, http.StatusInternalServerError, "Failed to create user")
 		return
 	}

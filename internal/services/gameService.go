@@ -10,18 +10,14 @@ import (
 	"gorm.io/gorm"
 )
 
-func GetGameByID(gameID uint) (*models.Game, error) {
-	return repositories.GetGameByID(gameID)
-}
-
 func StartGame(roomID uint, userID uint) (*models.Game, *models.GameRoomConfig, []*models.GamePrompt, error) {
 	// Verify host
-	if err := VerifyGameRoomHost(roomID, userID, common.ErrStartGameNotHost); err != nil {
+	if err := verifyGameRoomHost(roomID, userID, common.ErrStartGameNotHost); err != nil {
 		return nil, nil, nil, err
 	}
 
 	// Verify no game at the Ongoing or Voting stage
-	if err := VerifyNoActiveGameInRoom(roomID); err != nil {
+	if err := verifyNoActiveGameInRoom(roomID); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -36,26 +32,26 @@ func StartGame(roomID uint, userID uint) (*models.Game, *models.GameRoomConfig, 
 	}
 
 	// Find all users in the GameRoom and create Player entries for the new game
-	users, err := GetUsersByGameRoomID(roomID)
+	users, err := getUsersByGameRoomID(roomID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if err := CreatePlayersInGame(users, roomID); err != nil {
+	if err := createPlayersInGame(users, roomID); err != nil {
 		return nil, nil, nil, err
 	}
 
 	// Load GameRoomConfig
-	gameRoomConfig, err := GetGameRoomConfigByRoomID(roomID)
+	gameRoomConfig, err := getGameRoomConfigByRoomID(roomID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	// Create and load default game prompts
-	if err := CreateGamePrompts(game.ID, gameRoomConfig.NumberOfPrompts); err != nil {
+	if err := createGamePrompts(game.ID, gameRoomConfig.NumberOfPrompts); err != nil {
 		return nil, nil, nil, err
 	}
 
-	gamePrompts, err := GetGamePromptsByGameID(game.ID)
+	gamePrompts, err := getGamePromptsByGameID(game.ID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -64,27 +60,23 @@ func StartGame(roomID uint, userID uint) (*models.Game, *models.GameRoomConfig, 
 	return game, gameRoomConfig, gamePrompts, nil
 }
 
-func UpdateGame(game *models.Game) error {
-	return repositories.UpdateGame(game)
-}
-
 func EndGame(roomID uint, gameID uint, userID uint) (*models.Game, []*models.Player, error) {
 	// Verify host
-	if err := VerifyGameRoomHost(roomID, userID, common.ErrEndGameNotHost); err != nil {
+	if err := verifyGameRoomHost(roomID, userID, common.ErrEndGameNotHost); err != nil {
 		return nil, nil, err
 	}
 
 	// Find the game, set status to completed, and update the end time
-	game, err := GetGameByID(gameID)
+	game, err := getGameByID(gameID)
 	if err != nil {
 		return nil, nil, err
 	}
 	game.Status = models.GameStatusCompleted
 	game.EndTime = time.Now()
-	UpdateGame(game)
+	updateGame(game)
 
 	// Calculate final scores
-	players, err := GetPlayersByGameID(gameID)
+	players, err := getPlayersByGameID(gameID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,7 +84,15 @@ func EndGame(roomID uint, gameID uint, userID uint) (*models.Game, []*models.Pla
 	return game, players, nil
 }
 
-func VerifyNoActiveGameInRoom(roomID uint) error {
+func getGameByID(gameID uint) (*models.Game, error) {
+	return repositories.GetGameByID(gameID)
+}
+
+func updateGame(game *models.Game) error {
+	return repositories.UpdateGame(game)
+}
+
+func verifyNoActiveGameInRoom(roomID uint) error {
 	_, err := repositories.GetGameByRoomIDAndStatus(roomID, string(models.GameStatusOngoing), string(models.GameStatusVoting))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -103,7 +103,7 @@ func VerifyNoActiveGameInRoom(roomID uint) error {
 	return common.ErrActiveGameExists
 }
 
-func GetOngoingGameInRoom(roomID uint) (*models.Game, error) {
+func getOngoingGameInRoom(roomID uint) (*models.Game, error) {
 	game, err := repositories.GetGameByRoomIDAndStatus(roomID, string(models.GameStatusOngoing))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {

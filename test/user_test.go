@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,7 +19,7 @@ func TestGetAllUsersShouldReturnAllUsers(t *testing.T) {
 	ResetDatabase()
 
 	// Create user1
-	user1 := models.User{Name: "user1"}
+	user1 := models.User{Name: "user1", Type: models.UserTypeGuest}
 	config.DB.Create(&user1)
 
 	// Create a GameRoom with user1 as the host
@@ -27,7 +28,7 @@ func TestGetAllUsersShouldReturnAllUsers(t *testing.T) {
 	config.DB.Create(&gameRoom)
 
 	// Create user2 associated with the GameRoom
-	user2 := models.User{Name: "user2", GameRoomID: &gameRoomID}
+	user2 := models.User{Name: "user2", Type: models.UserTypeGuest, GameRoomID: &gameRoomID}
 	config.DB.Create(&user2)
 
 	req, _ := http.NewRequest(http.MethodGet, "/users", nil)
@@ -115,9 +116,18 @@ func TestGetUserShouldReturnIDInvalid(t *testing.T) {
 func TestCreateUserShouldCreateUser(t *testing.T) {
 	ResetDatabase()
 
-	req, _ := http.NewRequest(http.MethodPost, "/users", nil)
+	createPayload := map[string]interface{}{
+		"type": "guest",
+	}
+	createJSON, _ := json.Marshal(createPayload)
+
+	req, _ := http.NewRequest(http.MethodPost, "/users", bytes.NewReader(createJSON))
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusCreated {
+		t.Logf("Unexpected response code: %d, body: %s", resp.Code, resp.Body.String())
+	}
 
 	assert.Equal(t, http.StatusCreated, resp.Code)
 

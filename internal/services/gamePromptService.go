@@ -5,13 +5,13 @@ import (
 	"scattergories-backend/internal/repositories"
 )
 
-func GetGamePromptsByGameID(gameID uint) ([]*models.GamePrompt, error) {
+func getGamePromptsByGameID(gameID uint) ([]*models.GamePrompt, error) {
 	return repositories.GetGamePromptsByGameID(gameID)
 }
 
-func CreateGamePrompts(gameID uint, numberOfPrompts int) error {
+func createGamePrompts(gameID uint, numberOfPrompts int) error {
 	// Randomly select a subset of prompts
-	prompts, err := GetRandomPromptsGivenLimit(numberOfPrompts)
+	prompts, err := getRandomPromptsGivenLimit(numberOfPrompts)
 	if err != nil {
 		return err
 	}
