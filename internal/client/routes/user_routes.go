@@ -21,7 +21,8 @@ func RegisterUserRoutes(router *gin.Engine) {
 		}
 	}
 
-	router.POST("/login", controllers.Login) // Public route
+	router.POST("/guest", controllers.CreateAccount) // Public route
+	router.POST("/login", controllers.Login)         // Public route
 	router.POST("/logout", middleware.JWTAuthMiddleware(), controllers.Logout)
 	router.POST("/refresh-token", controllers.ExchangeToken) // Public route
 }
