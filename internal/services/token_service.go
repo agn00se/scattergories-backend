@@ -77,7 +77,7 @@ func RefreshTokens(refreshToken string) (string, string, error) {
 
 	// Generate new access token
 	userType := models.UserType(claims["user_type"].(string))
-	newAccessToken, err := generateJWT(userID, userType)
+	newAccessToken, err := GenerateJWT(userID, userType)
 	if err != nil {
 		return "", "", err
 	}
@@ -91,7 +91,7 @@ func RefreshTokens(refreshToken string) (string, string, error) {
 	return newAccessToken, newRefreshToken, nil
 }
 
-func generateJWT(userID uint, userType models.UserType) (string, error) {
+func GenerateJWT(userID uint, userType models.UserType) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id":   userID,
 		"user_type": string(userType),

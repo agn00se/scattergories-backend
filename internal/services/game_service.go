@@ -36,7 +36,7 @@ func StartGame(roomID uint, userID uint) (*models.Game, *models.GameRoomConfig, 
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if err := createPlayersInGame(users, roomID); err != nil {
+	if err := createPlayersInGame(users, game.ID); err != nil {
 		return nil, nil, nil, err
 	}
 

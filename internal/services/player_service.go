@@ -9,6 +9,10 @@ func getPlayersByGameID(gameID uint) ([]*models.Player, error) {
 	return repositories.GetPlayersByGameID(gameID)
 }
 
+func getPlayerByUserIDAndGameID(userID uint, gameID uint) (*models.Player, error) {
+	return repositories.GetPlayerByUserIDGameID(userID, gameID)
+}
+
 func createPlayersInGame(users []*models.User, gameID uint) error {
 	for _, user := range users {
 		if err := createPlayer(user.ID, gameID); err != nil {

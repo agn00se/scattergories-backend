@@ -8,6 +8,7 @@ var (
 	ErrEndGameNotHost                 = errors.New("only host can end the game")
 	ErrEmailAlreadyUsed               = errors.New("email is already in use")
 	ErrGameNotFound                   = errors.New("game not found")
+	ErrGamePromptNotFound             = errors.New("game prompt not found")
 	ErrGameRoomFull                   = errors.New("game room is full")
 	ErrGameRoomNotFound               = errors.New("game room not found")
 	ErrGameRoomConfigNotFound         = errors.New("game room config not found")

@@ -13,6 +13,14 @@ func GetGamePromptsByGameID(gameID uint) ([]*models.GamePrompt, error) {
 	return gamePrompts, nil
 }
 
+func GetGameIDByGamePromptID(gamePromptID uint) (uint, error) {
+	var gamePrompt models.GamePrompt
+	if err := config.DB.Where("id = ?", gamePromptID).First(&gamePrompt).Error; err != nil {
+		return 0, err
+	}
+	return gamePrompt.GameID, nil
+}
+
 func CreateGamePrompt(gamePrompt *models.GamePrompt) error {
 	return config.DB.Create(gamePrompt).Error
 }

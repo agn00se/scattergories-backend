@@ -2,6 +2,7 @@ package routes
 
 import (
 	"scattergories-backend/internal/client/controllers"
+	"scattergories-backend/internal/client/ws"
 	"scattergories-backend/internal/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -19,4 +20,6 @@ func RegisterGameRoomRoutes(router *gin.Engine) {
 		gameRoomRoutes.PUT("/:room_id/join", controllers.JoinGameRoom)
 		gameRoomRoutes.PUT("/:room_id/leave", controllers.LeaveGameRoom)
 	}
+
+	router.GET("/ws/:room_id", middleware.JWTAuthMiddleware(), ws.HandleWebSocket)
 }

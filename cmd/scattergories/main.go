@@ -22,9 +22,5 @@ func main() {
 	router := gin.Default()
 	routes.RegisterRoutes(router)
 
-	router.GET("/ws/:room_id", func(c *gin.Context) {
-		ws.HandleWebSocket(c)
-	})
-
 	router.Run(":8080")
 }

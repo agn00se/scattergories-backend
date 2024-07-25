@@ -37,7 +37,7 @@ func startGame(client *Client, roomID uint, message []byte) {
 	}
 
 	// Start the game
-	game, gameRoomConfig, gamePrompts, err := services.StartGame(roomID, req.UserID)
+	game, gameRoomConfig, gamePrompts, err := services.StartGame(roomID, req.HostID)
 	if err != nil {
 		sendError(client, err.Error())
 		return
@@ -61,7 +61,7 @@ func endGame(client *Client, roomID uint, message []byte) {
 		return
 	}
 
-	game, players, err := services.EndGame(roomID, req.GameID, req.UserID)
+	game, players, err := services.EndGame(roomID, req.GameID, req.HostID)
 	if err != nil {
 		sendError(client, err.Error())
 		return
@@ -81,13 +81,7 @@ func submitAnswer(client *Client, roomID uint, message []byte) {
 		return
 	}
 
-	answer := &models.Answer{
-		Answer:       req.Answer,
-		PlayerID:     req.PlayerID,
-		GamePromptID: req.GamePromptID,
-	}
-
-	if err := services.CreateOrUpdateAnswer(roomID, answer); err != nil {
+	if err := services.CreateOrUpdateAnswer(roomID, req.Answer, req.UserID, req.GamePromptID); err != nil {
 		sendError(client, "Failed to save answer"+err.Error())
 		return
 	}
@@ -116,7 +110,7 @@ func updateGameConfig(client *Client, roomID uint, message []byte) {
 		Letter:          req.Letter,
 	}
 
-	config, err := services.UpdateGameConfig(config, req.UserID)
+	config, err := services.UpdateGameConfig(config, req.HostID)
 	if err != nil {
 		sendError(client, err.Error())
 		return

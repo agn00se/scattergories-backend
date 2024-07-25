@@ -5,6 +5,7 @@ import (
 	"scattergories-backend/internal/client/controllers"
 	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/services"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -42,9 +43,19 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Set user ID and user type in the context
-		c.Set("userID", claims["user_id"])
-		c.Set("userType", claims["user_type"])
+		// Check if the user ID from the request matches the user ID from the token
+		userIDFromToken := uint(claims["user_id"].(float64))
+		userIDFromRequest := c.DefaultPostForm("user_id", c.DefaultPostForm("host_id", ""))
+
+		if userIDFromRequest != "" {
+			userIDConverted, err := strconv.Atoi(userIDFromRequest)
+			if err != nil || uint(userIDConverted) != userIDFromToken {
+				controllers.HandleError(c, http.StatusUnauthorized, common.ErrInvalidToken.Error())
+				c.Abort()
+				return
+			}
+		}
+
 		c.Next()
 	}
 }

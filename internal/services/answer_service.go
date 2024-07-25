@@ -8,33 +8,47 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateOrUpdateAnswer(roomID uint, answer *models.Answer) error {
-	// Verify player submitting the answer is in the game room
-	if err := verifyPlayerInGameRoom(roomID, answer.PlayerID); err != nil {
+func CreateOrUpdateAnswer(roomID uint, answerText string, userID uint, gamePromptID uint) error {
+	// Get gameID from gamePromptID
+	gameID, err := getGameIDByGamePromptID(gamePromptID)
+	if err != nil {
 		return err
 	}
 
-	existingAnswer, err := repositories.GetAnswerByPlayerAndPrompt(answer.PlayerID, answer.GamePromptID)
-	if err == nil {
-		existingAnswer.Answer = answer.Answer
-		return repositories.SaveAnswer(existingAnswer)
-	} else if err != gorm.ErrRecordNotFound {
+	// Get the player from userID and gameID
+	player, err := getPlayerByUserIDAndGameID(userID, gameID)
+	if err != nil {
 		return err
 	}
-	// Create a new answer if no existing answer is found
-	return repositories.CreateAnswer(answer)
+
+	// Verify player submitting the answer is in the game room
+	if err := verifyPlayerInGameRoom(roomID, player); err != nil {
+		return err
+	}
+
+	existingAnswer, err := repositories.GetAnswerByPlayerAndPrompt(player.ID, gamePromptID)
+	if err == nil {
+		// Update the existing answer if one is found
+		existingAnswer.Answer = answerText
+		return repositories.SaveAnswer(existingAnswer)
+	} else if err != gorm.ErrRecordNotFound {
+		// Create a new answer if no existing answer is found
+		answer := &models.Answer{
+			PlayerID:     player.ID,
+			GamePromptID: gamePromptID,
+			Answer:       answerText,
+		}
+		return repositories.CreateAnswer(answer)
+	} else {
+		return err
+	}
 }
 
 func getAnswersByGameID(gameID uint) ([]*models.Answer, error) {
 	return repositories.GetAnswersByGameID(gameID)
 }
 
-func verifyPlayerInGameRoom(roomID uint, playerID uint) error {
-	player, err := repositories.GetPlayerByID(playerID)
-	if err != nil {
-		return err
-	}
-
+func verifyPlayerInGameRoom(roomID uint, player *models.Player) error {
 	if player.User.GameRoomID == nil || *player.User.GameRoomID != roomID {
 		return common.ErrUserNotInSpecifiedRoom
 	}

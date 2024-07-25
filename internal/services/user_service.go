@@ -30,8 +30,8 @@ func CreateGuestUser() (*models.User, error) {
 	guestName := generateRandomGuestName()
 
 	user := &models.User{
-		Name: guestName,
 		Type: models.UserTypeGuest,
+		Name: guestName,
 	}
 	return createUser(user)
 }
@@ -43,8 +43,8 @@ func CreateRegisteredUser(name string, email string, password string) (*models.U
 	}
 
 	user := &models.User{
+		Type:         models.UserTypeRegistered,
 		Name:         name,
-		Type:         models.UserTypeGuest,
 		Email:        &email,
 		PasswordHash: &hash,
 		Salt:         &salt,

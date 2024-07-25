@@ -55,7 +55,7 @@ func CreateAccount(c *gin.Context) {
 		return
 	}
 
-	user, err := services.Register(request.Type, *request.Name, *request.Email, *request.Password)
+	user, err := services.CreateRegisteredUser(request.Name, request.Email, request.Password)
 	if err != nil {
 		if err == common.ErrEmailAlreadyUsed {
 			HandleError(c, http.StatusConflict, err.Error())
@@ -66,6 +66,22 @@ func CreateAccount(c *gin.Context) {
 	}
 
 	response := responses.ToUserResponse(user)
+	c.JSON(http.StatusCreated, response)
+}
+
+func CreateGuestAccount(c *gin.Context) {
+	user, err := services.CreateGuestUser()
+	if err != nil {
+		HandleError(c, http.StatusInternalServerError, err.Error())
+	}
+
+	// Generate access token for guest users during account creation
+	accessToken, err := services.GenerateJWT(user.ID, user.Type)
+	if err != nil {
+		HandleError(c, http.StatusInternalServerError, err.Error())
+	}
+
+	response := responses.ToGuestUserResponse(user, accessToken)
 	c.JSON(http.StatusCreated, response)
 }
 

@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"log"
 	"scattergories-backend/internal/common"
-	"scattergories-backend/internal/models"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -23,22 +22,6 @@ var params = ArgonParams{
 	Memory:  64 * 1024,
 	Threads: 4,
 	KeyLen:  32,
-}
-
-func Register(userType string, name string, email string, password string) (*models.User, error) {
-	var user *models.User
-	var err error
-
-	if userType == string(models.UserTypeGuest) {
-		user, err = CreateGuestUser()
-	} else {
-		user, err = CreateRegisteredUser(name, email, password)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-	return user, nil
 }
 
 func Login(email string, password string) (string, string, error) {
@@ -64,19 +47,16 @@ func Login(email string, password string) (string, string, error) {
 		return "", "", common.ErrLoginFailed
 	}
 
-	// Generate access token for both guest and registered users
-	accessToken, err := generateJWT(user.ID, user.Type)
+	// Generate access token
+	accessToken, err := GenerateJWT(user.ID, user.Type)
 	if err != nil {
 		return "", "", err
 	}
 
-	// Generate refresh token for registered users
-	var refreshToken string
-	if user.Type == models.UserTypeRegistered {
-		refreshToken, err = generateRefreshToken(user.ID)
-		if err != nil {
-			return "", "", err
-		}
+	// Generate refresh token
+	refreshToken, err := generateRefreshToken(user.ID)
+	if err != nil {
+		return "", "", err
 	}
 
 	return accessToken, refreshToken, nil

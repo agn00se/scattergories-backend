@@ -2,18 +2,18 @@ package responses
 
 import "scattergories-backend/internal/models"
 
-type UserResponse struct {
+type GuestUserResponse struct {
 	ID         uint   `json:"id"`
 	Name       string `json:"name"`
-	Email      string `json:"email,omitempty"`
 	GameRoomID *uint  `json:"room_id,omitempty"`
+	Token      string `json:"token"`
 }
 
-func ToUserResponse(user *models.User) *UserResponse {
-	return &UserResponse{
+func ToGuestUserResponse(user *models.User, token string) *GuestUserResponse {
+	return &GuestUserResponse{
 		ID:         user.ID,
 		Name:       user.Name,
-		Email:      *user.Email,
 		GameRoomID: user.GameRoomID,
+		Token:      token,
 	}
 }
