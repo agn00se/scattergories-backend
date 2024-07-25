@@ -12,5 +12,6 @@ func RegisterCustomValidators() {
 		Validate = v
 		v.RegisterValidation("not_blank", NotBlank)
 		v.RegisterValidation("passcode_required_if_private", PasscodeRequiredIfPrivate)
+		v.RegisterValidation("password_policy", PasswordValidator)
 	}
 }
