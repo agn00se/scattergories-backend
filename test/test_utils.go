@@ -2,27 +2,37 @@ package test
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"scattergories-backend/config"
 	"scattergories-backend/internal/client/routes"
 	"scattergories-backend/internal/models"
 	"scattergories-backend/pkg/validators"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 )
 
-var router *gin.Engine
+var (
+	router    *gin.Engine
+	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+	testUser  models.User
+)
 
-func TestSetup() {
-	SetProjectRoot()
+func testSetup() {
+	setProjectRoot()
 	validators.RegisterCustomValidators()
-	SetupTestDB()
-	router = SetupRouter()
+	setupTestDB()
+	router = setupRouter()
+	testUser = createTestUser()
 }
 
-// SetProjectRoot sets the working directory to the project root
-func SetProjectRoot() {
+// setProjectRoot sets the working directory to the project root
+func setProjectRoot() {
 	// Get the absolute path to the project root
 	projectRoot, err := filepath.Abs("../")
 	if err != nil {
@@ -37,20 +47,69 @@ func SetProjectRoot() {
 	}
 }
 
-// SetupRouter initializes the Gin router with user routes
-func SetupRouter() *gin.Engine {
+// setupRouter initializes the Gin router with user routes
+func setupRouter() *gin.Engine {
 	router := gin.Default()
 	routes.RegisterUserRoutes(router)
 	routes.RegisterGameRoomRoutes(router)
 	return router
 }
 
-// SetupTestDB initializes the database for testing
-func SetupTestDB() {
-	config.ConnectDB()
+func makeUnauthenticatedRequest(method, url string, body io.Reader) *httptest.ResponseRecorder {
+	req, _ := http.NewRequest(method, url, body)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	return resp
 }
 
-func ResetDatabase() {
+func makeAuthenticatedRequest(method, url string, body io.Reader, userID uint, userType string) *httptest.ResponseRecorder {
+	token, err := generateTestToken(userID, userType)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to generate test token: %v", err))
+	}
+
+	req, _ := http.NewRequest(method, url, body)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	return resp
+}
+
+func generateTestToken(userID uint, userType string) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id":   userID,
+		"user_type": userType,
+		"exp":       time.Now().Add(time.Hour * 24).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
+}
+
+func createTestUser() models.User {
+	user := models.User{
+		Name: "Test User",
+		Type: models.UserTypeGuest,
+	}
+	result := config.DB.Create(&user)
+	if result.Error != nil {
+		panic(fmt.Sprintf("Failed to create test user: %v", result.Error))
+	}
+	return user
+}
+
+// setupTestDB initializes the database for testing
+func setupTestDB() {
+	config.ConnectDB()
+	config.InitRedis()
+}
+
+func resetDatabase() {
 	dropTables()
 	migrateTables()
 }

@@ -1,11 +1,9 @@
 package test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"scattergories-backend/config"
 	"scattergories-backend/internal/client/controllers/responses"
 	"scattergories-backend/internal/models"
@@ -16,7 +14,7 @@ import (
 )
 
 func TestGetAllUsersShouldReturnAllUsers(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create user1
 	user1 := models.User{Name: "user1", Type: models.UserTypeGuest}
@@ -31,10 +29,7 @@ func TestGetAllUsersShouldReturnAllUsers(t *testing.T) {
 	user2 := models.User{Name: "user2", Type: models.UserTypeGuest, GameRoomID: &gameRoomID}
 	config.DB.Create(&user2)
 
-	req, _ := http.NewRequest(http.MethodGet, "/users", nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	resp := makeAuthenticatedRequest(http.MethodGet, "/users", nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var users []responses.UserResponse
@@ -48,12 +43,9 @@ func TestGetAllUsersShouldReturnAllUsers(t *testing.T) {
 }
 
 func TestGetAllUsersShouldReturnNoUser(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
-	req, _ := http.NewRequest(http.MethodGet, "/users", nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	resp := makeAuthenticatedRequest(http.MethodGet, "/users", nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var users []responses.UserResponse
@@ -63,16 +55,14 @@ func TestGetAllUsersShouldReturnNoUser(t *testing.T) {
 }
 
 func TestGetUserShouldReturnUser(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a test user
 	user := models.User{Name: "testuser"}
 	config.DB.Create(&user)
 
-	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/users/%d", user.ID), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/users/%d", user.ID)
+	resp := makeAuthenticatedRequest(http.MethodGet, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var returnedUser responses.UserResponse
@@ -82,14 +72,12 @@ func TestGetUserShouldReturnUser(t *testing.T) {
 }
 
 func TestGetUserShouldReturnUserNotFound(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	nonExistentUserID := uint(999)
 
-	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/users/%d", nonExistentUserID), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/users/%d", nonExistentUserID)
+	resp := makeAuthenticatedRequest(http.MethodGet, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 
 	var response map[string]string
@@ -99,12 +87,10 @@ func TestGetUserShouldReturnUserNotFound(t *testing.T) {
 }
 
 func TestGetUserShouldReturnIDInvalid(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
-	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/users/%s", "invalidIDFormat"), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/users/%s", "invalidIDFormat")
+	resp := makeAuthenticatedRequest(http.MethodGet, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 
 	var response map[string]string
@@ -113,22 +99,10 @@ func TestGetUserShouldReturnIDInvalid(t *testing.T) {
 	assert.Equal(t, ErrInvalidUserID, response["error"])
 }
 
-func TestCreateUserShouldCreateUser(t *testing.T) {
-	ResetDatabase()
+func TestCreateGuestUserShouldCreateUser(t *testing.T) {
+	resetDatabase()
 
-	createPayload := map[string]interface{}{
-		"type": "guest",
-	}
-	createJSON, _ := json.Marshal(createPayload)
-
-	req, _ := http.NewRequest(http.MethodPost, "/users", bytes.NewReader(createJSON))
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	if resp.Code != http.StatusCreated {
-		t.Logf("Unexpected response code: %d, body: %s", resp.Code, resp.Body.String())
-	}
-
+	resp := makeUnauthenticatedRequest(http.MethodPost, "/guests", nil)
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
 	var returnedUser responses.UserResponse
@@ -140,16 +114,14 @@ func TestCreateUserShouldCreateUser(t *testing.T) {
 }
 
 func TestDeleteUserShouldDeleteUser(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a test user
 	user := models.User{Name: "testuser"}
 	config.DB.Create(&user)
 
-	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("/users/%d", user.ID), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/users/%d", user.ID)
+	resp := makeAuthenticatedRequest(http.MethodDelete, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusNoContent, resp.Code)
 
 	// Check that the user is deleted
@@ -160,14 +132,12 @@ func TestDeleteUserShouldDeleteUser(t *testing.T) {
 }
 
 func TestDeleteUserShouldReturnUserNotFound(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	nonExistentUserID := uint(999)
 
-	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("/users/%d", nonExistentUserID), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/users/%d", nonExistentUserID)
+	resp := makeAuthenticatedRequest(http.MethodDelete, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 
 	var response map[string]string
@@ -177,12 +147,10 @@ func TestDeleteUserShouldReturnUserNotFound(t *testing.T) {
 }
 
 func TestDeleteUserShouldReturnIDInvalid(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
-	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("/users/%s", "invalidIDFormat"), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/users/%s", "invalidIDFormat")
+	resp := makeAuthenticatedRequest(http.MethodDelete, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 
 	var response map[string]string
@@ -192,10 +160,8 @@ func TestDeleteUserShouldReturnIDInvalid(t *testing.T) {
 }
 
 func verifyUserByGet(t *testing.T, returnedUser responses.UserResponse) {
-	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/users/%d", returnedUser.ID), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/users/%d", returnedUser.ID)
+	resp := makeAuthenticatedRequest(http.MethodGet, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var createdUser responses.UserResponse

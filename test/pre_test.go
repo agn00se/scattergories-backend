@@ -6,8 +6,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	TestSetup()
+	testSetup()
 	code := m.Run()
-	ResetDatabase()
+	resetDatabase()
 	os.Exit(code)
 }

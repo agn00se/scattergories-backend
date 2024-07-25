@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"scattergories-backend/config"
 	"scattergories-backend/internal/client/controllers/responses"
 	"scattergories-backend/internal/models"
@@ -15,7 +14,7 @@ import (
 )
 
 func TestGetAllGameRoomsShouldReturnAllRooms(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create some users to be hosts of game rooms
 	host1 := models.User{Name: "host1"}
@@ -29,10 +28,7 @@ func TestGetAllGameRoomsShouldReturnAllRooms(t *testing.T) {
 	config.DB.Create(&gameRoom1)
 	config.DB.Create(&gameRoom2)
 
-	req, _ := http.NewRequest(http.MethodGet, "/game-rooms", nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	resp := makeAuthenticatedRequest(http.MethodGet, "/game-rooms", nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var rooms []responses.GameRoomResponse
@@ -51,12 +47,9 @@ func TestGetAllGameRoomsShouldReturnAllRooms(t *testing.T) {
 }
 
 func TestGetAllGameRoomsShouldReturnNoRoom(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
-	req, _ := http.NewRequest(http.MethodGet, "/game-rooms", nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	resp := makeAuthenticatedRequest(http.MethodGet, "/game-rooms", nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var rooms []responses.GameRoomResponse
@@ -66,7 +59,7 @@ func TestGetAllGameRoomsShouldReturnNoRoom(t *testing.T) {
 }
 
 func TestGetGameRoomShouldReturnRoom(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a test user
 	user := models.User{Name: "user"}
@@ -76,10 +69,8 @@ func TestGetGameRoomShouldReturnRoom(t *testing.T) {
 	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false, HostID: &user.ID}
 	config.DB.Create(&gameRoom)
 
-	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/game-rooms/%d", gameRoom.ID), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d", gameRoom.ID)
+	resp := makeAuthenticatedRequest(http.MethodGet, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var returnedRoom responses.GameRoomResponse
@@ -93,16 +84,14 @@ func TestGetGameRoomShouldReturnRoom(t *testing.T) {
 }
 
 func TestGetGameRoomWithoutHostShouldReturnRoomWithoutHost(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a game room
 	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
 	config.DB.Create(&gameRoom)
 
-	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/game-rooms/%d", gameRoom.ID), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d", gameRoom.ID)
+	resp := makeAuthenticatedRequest(http.MethodGet, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var returnedRoom responses.GameRoomResponse
@@ -116,14 +105,12 @@ func TestGetGameRoomWithoutHostShouldReturnRoomWithoutHost(t *testing.T) {
 }
 
 func TestGetGameRoomShouldReturnRoomNotFound(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	nonExistentRoomID := uint(999)
 
-	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/game-rooms/%d", nonExistentRoomID), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d", nonExistentRoomID)
+	resp := makeAuthenticatedRequest(http.MethodGet, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 
 	var response map[string]string
@@ -133,12 +120,10 @@ func TestGetGameRoomShouldReturnRoomNotFound(t *testing.T) {
 }
 
 func TestGetGameRoomShouldReturnIDInvalid(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
-	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/game-rooms/%s", "invalidIDFormat"), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%s", "invalidIDFormat")
+	resp := makeAuthenticatedRequest(http.MethodGet, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 
 	var response map[string]string
@@ -148,7 +133,7 @@ func TestGetGameRoomShouldReturnIDInvalid(t *testing.T) {
 }
 
 func TestCreateGameRoomShouldCreateRoom(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a test user
 	host := models.User{Name: "hostuser"}
@@ -161,11 +146,7 @@ func TestCreateGameRoomShouldCreateRoom(t *testing.T) {
 	}
 	createJSON, _ := json.Marshal(createPayload)
 
-	req, _ := http.NewRequest(http.MethodPost, "/game-rooms", bytes.NewBuffer(createJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	resp := makeAuthenticatedRequest(http.MethodPost, "/game-rooms", bytes.NewBuffer(createJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
 	var returnedRoom responses.GameRoomResponse
@@ -183,7 +164,7 @@ func TestCreateGameRoomShouldCreateRoom(t *testing.T) {
 }
 
 func TestCreatePrivateGameRoomShouldCreateRoom(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a test user
 	host := models.User{Name: "hostuser"}
@@ -197,11 +178,7 @@ func TestCreatePrivateGameRoomShouldCreateRoom(t *testing.T) {
 	}
 	createJSON, _ := json.Marshal(createPayload)
 
-	req, _ := http.NewRequest(http.MethodPost, "/game-rooms", bytes.NewBuffer(createJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	resp := makeAuthenticatedRequest(http.MethodPost, "/game-rooms", bytes.NewBuffer(createJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
 	var returnedRoom responses.GameRoomResponse
@@ -214,7 +191,7 @@ func TestCreatePrivateGameRoomShouldCreateRoom(t *testing.T) {
 }
 
 func TestCreateGameRoomShouldFailValidationGivenNoHost(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a game room with the user being the host
 	createPayload := map[string]interface{}{
@@ -222,11 +199,7 @@ func TestCreateGameRoomShouldFailValidationGivenNoHost(t *testing.T) {
 	}
 	createJSON, _ := json.Marshal(createPayload)
 
-	req, _ := http.NewRequest(http.MethodPost, "/game-rooms", bytes.NewBuffer(createJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	resp := makeAuthenticatedRequest(http.MethodPost, "/game-rooms", bytes.NewBuffer(createJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 
 	var response map[string]string
@@ -236,7 +209,7 @@ func TestCreateGameRoomShouldFailValidationGivenNoHost(t *testing.T) {
 }
 
 func TestCreateGameRoomShouldFailValidationGivenPublicRoomNoPasscode(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a test user
 	host := models.User{Name: "hostuser"}
@@ -249,11 +222,7 @@ func TestCreateGameRoomShouldFailValidationGivenPublicRoomNoPasscode(t *testing.
 	}
 	createJSON, _ := json.Marshal(createPayload)
 
-	req, _ := http.NewRequest(http.MethodPost, "/game-rooms", bytes.NewBuffer(createJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	resp := makeAuthenticatedRequest(http.MethodPost, "/game-rooms", bytes.NewBuffer(createJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 
 	var response map[string]string
@@ -262,23 +231,8 @@ func TestCreateGameRoomShouldFailValidationGivenPublicRoomNoPasscode(t *testing.
 	assert.Equal(t, "Key: 'GameRoomRequest.Passcode' Error:Field validation for 'Passcode' failed on the 'passcode_required_if_private' tag", response["error"])
 }
 
-func TestCreateGameRoomShouldReturnIDInvalid(t *testing.T) {
-	ResetDatabase()
-
-	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/game-rooms/%s", "invalidIDFormat"), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusBadRequest, resp.Code)
-
-	var response map[string]string
-	err := json.Unmarshal(resp.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, ErrInvalidRoomID, response["error"])
-}
-
 func TestCreateGameRoomShouldFailGivenNonExistentHostUser(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create game room request with a non-existent host ID
 	createPayload := map[string]interface{}{
@@ -288,11 +242,7 @@ func TestCreateGameRoomShouldFailGivenNonExistentHostUser(t *testing.T) {
 	}
 	createJSON, _ := json.Marshal(createPayload)
 
-	req, _ := http.NewRequest(http.MethodPost, "/game-rooms", bytes.NewBuffer(createJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	resp := makeAuthenticatedRequest(http.MethodPost, "/game-rooms", bytes.NewBuffer(createJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 
 	var response map[string]string
@@ -302,7 +252,7 @@ func TestCreateGameRoomShouldFailGivenNonExistentHostUser(t *testing.T) {
 }
 
 func TestCreateGameRoomShouldFailGivenDuplicateHost(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a test user to act as the host
 	host := models.User{Name: "hostuser"}
@@ -319,11 +269,7 @@ func TestCreateGameRoomShouldFailGivenDuplicateHost(t *testing.T) {
 	}
 	createJSON, _ := json.Marshal(createPayload)
 
-	req, _ := http.NewRequest(http.MethodPost, "/game-rooms", bytes.NewBuffer(createJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	resp := makeAuthenticatedRequest(http.MethodPost, "/game-rooms", bytes.NewBuffer(createJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusConflict, resp.Code)
 
 	var response map[string]string
@@ -333,7 +279,7 @@ func TestCreateGameRoomShouldFailGivenDuplicateHost(t *testing.T) {
 }
 
 func TestJoinGameRoomShouldJoinGameRoom(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create test user
 	user := models.User{Name: "user"}
@@ -349,11 +295,8 @@ func TestJoinGameRoomShouldJoinGameRoom(t *testing.T) {
 	}
 	joinJSON, _ := json.Marshal(joinPayload)
 
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%d/join", gameRoom.ID), bytes.NewBuffer(joinJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d/join", gameRoom.ID)
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(joinJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var response map[string]string
@@ -368,7 +311,7 @@ func TestJoinGameRoomShouldJoinGameRoom(t *testing.T) {
 }
 
 func TestJoinGameRoomInBetweenGamesShouldJoinGameRoom(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create test user
 	user := models.User{Name: "user"}
@@ -388,11 +331,8 @@ func TestJoinGameRoomInBetweenGamesShouldJoinGameRoom(t *testing.T) {
 	}
 	joinJSON, _ := json.Marshal(joinPayload)
 
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%d/join", gameRoom.ID), bytes.NewBuffer(joinJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d/join", gameRoom.ID)
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(joinJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var response map[string]string
@@ -407,12 +347,10 @@ func TestJoinGameRoomInBetweenGamesShouldJoinGameRoom(t *testing.T) {
 }
 
 func TestJoinGameRoomShouldReturnIDInvalid(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%s/join", "invalidIDFormat"), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%s/join", "invalidIDFormat")
+	resp := makeAuthenticatedRequest(http.MethodPut, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 
 	var response map[string]string
@@ -422,7 +360,7 @@ func TestJoinGameRoomShouldReturnIDInvalid(t *testing.T) {
 }
 
 func TestJoinGameRoomShouldFailValidationGivenNoUser(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a game room
 	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
@@ -431,11 +369,8 @@ func TestJoinGameRoomShouldFailValidationGivenNoUser(t *testing.T) {
 	joinPayload := map[string]interface{}{}
 	joinJSON, _ := json.Marshal(joinPayload)
 
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%d/join", gameRoom.ID), bytes.NewBuffer(joinJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d/join", gameRoom.ID)
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(joinJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 
 	var response map[string]string
@@ -445,7 +380,7 @@ func TestJoinGameRoomShouldFailValidationGivenNoUser(t *testing.T) {
 }
 
 func TestJoinGameRoomShouldReturnRoomNotFound(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a test user
 	user := models.User{Name: "testuser"}
@@ -458,11 +393,8 @@ func TestJoinGameRoomShouldReturnRoomNotFound(t *testing.T) {
 	joinJSON, _ := json.Marshal(joinPayload)
 
 	nonExistentRoomID := uint(999)
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%d/join", nonExistentRoomID), bytes.NewBuffer(joinJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d/join", nonExistentRoomID)
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(joinJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 
 	var response map[string]string
@@ -472,7 +404,7 @@ func TestJoinGameRoomShouldReturnRoomNotFound(t *testing.T) {
 }
 
 func TestJoinGameRoomShouldReturnActiveGameExists(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a test user
 	user := models.User{Name: "testuser"}
@@ -492,11 +424,8 @@ func TestJoinGameRoomShouldReturnActiveGameExists(t *testing.T) {
 	}
 	joinJSON, _ := json.Marshal(joinPayload)
 
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%d/join", gameRoom.ID), bytes.NewBuffer(joinJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d/join", gameRoom.ID)
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(joinJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusConflict, resp.Code)
 
 	var response map[string]string
@@ -506,7 +435,7 @@ func TestJoinGameRoomShouldReturnActiveGameExists(t *testing.T) {
 }
 
 func TestJoinGameRoomShouldReturnUserNotFound(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a game room
 	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
@@ -518,11 +447,8 @@ func TestJoinGameRoomShouldReturnUserNotFound(t *testing.T) {
 	}
 	joinJSON, _ := json.Marshal(joinPayload)
 
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%d/join", gameRoom.ID), bytes.NewBuffer(joinJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d/join", gameRoom.ID)
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(joinJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 
 	var response map[string]string
@@ -532,7 +458,7 @@ func TestJoinGameRoomShouldReturnUserNotFound(t *testing.T) {
 }
 
 func TestLeaveGameRoomShouldLeaveRoom(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create test users
 	user := models.User{Name: "user"}
@@ -552,11 +478,8 @@ func TestLeaveGameRoomShouldLeaveRoom(t *testing.T) {
 	}
 	leaveJSON, _ := json.Marshal(leavePayload)
 
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%d/leave", gameRoom.ID), bytes.NewBuffer(leaveJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d/leave", gameRoom.ID)
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(leaveJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var response map[string]string
@@ -571,12 +494,10 @@ func TestLeaveGameRoomShouldLeaveRoom(t *testing.T) {
 }
 
 func TestLeaveGameRoomShouldReturnIDInvalid(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%s/leave", "invalidIDFormat"), nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%s/leave", "invalidIDFormat")
+	resp := makeAuthenticatedRequest(http.MethodPut, url, nil, testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 
 	var response map[string]string
@@ -586,20 +507,17 @@ func TestLeaveGameRoomShouldReturnIDInvalid(t *testing.T) {
 }
 
 func TestLeaveGameRoomShouldFailValidationGivenNoUser(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a game room
 	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
 	config.DB.Create(&gameRoom)
 
-	joinPayload := map[string]interface{}{}
-	joinJSON, _ := json.Marshal(joinPayload)
+	leavePayload := map[string]interface{}{}
+	leaveJSON, _ := json.Marshal(leavePayload)
 
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%d/leave", gameRoom.ID), bytes.NewBuffer(joinJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d/leave", gameRoom.ID)
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(leaveJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 
 	var response map[string]string
@@ -609,7 +527,7 @@ func TestLeaveGameRoomShouldFailValidationGivenNoUser(t *testing.T) {
 }
 
 func TestLeaveGameRoomShouldReturnRoomNotFound(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a test user
 	user := models.User{Name: "testuser"}
@@ -622,11 +540,8 @@ func TestLeaveGameRoomShouldReturnRoomNotFound(t *testing.T) {
 	leaveJSON, _ := json.Marshal(leavePayload)
 
 	nonExistentRoomID := uint(999)
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%d/leave", nonExistentRoomID), bytes.NewBuffer(leaveJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d/leave", nonExistentRoomID)
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(leaveJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 
 	var response map[string]string
@@ -636,7 +551,7 @@ func TestLeaveGameRoomShouldReturnRoomNotFound(t *testing.T) {
 }
 
 func TestLeaveGameRoomShouldReturnUserNotFound(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create a game room
 	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
@@ -648,11 +563,8 @@ func TestLeaveGameRoomShouldReturnUserNotFound(t *testing.T) {
 	}
 	leaveJSON, _ := json.Marshal(leavePayload)
 
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%d/leave", gameRoom.ID), bytes.NewBuffer(leaveJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d/leave", gameRoom.ID)
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(leaveJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 
 	var response map[string]string
@@ -662,7 +574,7 @@ func TestLeaveGameRoomShouldReturnUserNotFound(t *testing.T) {
 }
 
 func TestLeaveGameRoomUserNotInSpecifiedRoom(t *testing.T) {
-	ResetDatabase()
+	resetDatabase()
 
 	// Create test users
 	user := models.User{Name: "user"}
@@ -678,11 +590,8 @@ func TestLeaveGameRoomUserNotInSpecifiedRoom(t *testing.T) {
 	}
 	leaveJSON, _ := json.Marshal(leavePayload)
 
-	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/game-rooms/%d/leave", gameRoom.ID), bytes.NewBuffer(leaveJSON))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
+	url := fmt.Sprintf("/game-rooms/%d/leave", gameRoom.ID)
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(leaveJSON), testUser.ID, string(testUser.Type))
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 
 	var response map[string]string
