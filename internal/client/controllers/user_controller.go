@@ -92,6 +92,13 @@ func DeleteAccount(c *gin.Context) {
 		return
 	}
 
+	userID, _ := c.Get("userID")
+	permitted, err := services.HasPermission(userID.(uint), services.UserWritePermission, id)
+	if err != nil || !permitted {
+		HandleError(c, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	err = services.DeleteUserByID(id)
 	if err != nil {
 		if err == common.ErrUserNotFound {

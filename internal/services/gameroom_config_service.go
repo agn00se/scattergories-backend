@@ -1,7 +1,6 @@
 package services
 
 import (
-	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/models"
 	"scattergories-backend/internal/repositories"
 	"scattergories-backend/pkg/utils"
@@ -13,10 +12,7 @@ var (
 	defaultNumberOfPrompts = 10
 )
 
-func UpdateGameConfig(request *models.GameRoomConfig, userID uint) (*models.GameRoomConfig, error) {
-	// Verify host
-	verifyGameRoomHost(request.GameRoomID, userID, common.ErrUpdateConfigNotHost)
-
+func UpdateGameConfig(request *models.GameRoomConfig) (*models.GameRoomConfig, error) {
 	// Fetch game room config
 	gameRoomConfig, err := getGameRoomConfigByRoomID(request.GameRoomID)
 	if err != nil {

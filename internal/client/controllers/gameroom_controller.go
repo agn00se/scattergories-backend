@@ -32,6 +32,13 @@ func GetGameRoom(c *gin.Context) {
 		return
 	}
 
+	userID, _ := c.Get("userID")
+	permitted, err := services.HasPermission(userID.(uint), services.GameRoomReadPermission, roomID)
+	if err != nil || !permitted {
+		HandleError(c, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	room, err := services.GetGameRoomByID(roomID)
 	if err != nil {
 		if err == common.ErrGameRoomNotFound {
@@ -73,6 +80,13 @@ func DeleteGameRoom(c *gin.Context) {
 	id, err := GetIDParam(c, "room_id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	permitted, err := services.HasPermission(userID.(uint), services.GameRoomWritePermission, id)
+	if err != nil || !permitted {
+		HandleError(c, http.StatusUnauthorized, err.Error())
 		return
 	}
 

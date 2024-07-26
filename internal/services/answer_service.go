@@ -1,7 +1,6 @@
 package services
 
 import (
-	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/models"
 	"scattergories-backend/internal/repositories"
 
@@ -18,11 +17,6 @@ func CreateOrUpdateAnswer(roomID uint, answerText string, userID uint, gamePromp
 	// Get the player from userID and gameID
 	player, err := getPlayerByUserIDAndGameID(userID, gameID)
 	if err != nil {
-		return err
-	}
-
-	// Verify player submitting the answer is in the game room
-	if err := verifyPlayerInGameRoom(roomID, player); err != nil {
 		return err
 	}
 
@@ -46,12 +40,4 @@ func CreateOrUpdateAnswer(roomID uint, answerText string, userID uint, gamePromp
 
 func getAnswersByGameID(gameID uint) ([]*models.Answer, error) {
 	return repositories.GetAnswersByGameID(gameID)
-}
-
-func verifyPlayerInGameRoom(roomID uint, player *models.Player) error {
-	if player.User.GameRoomID == nil || *player.User.GameRoomID != roomID {
-		return common.ErrUserNotInSpecifiedRoom
-	}
-
-	return nil
 }

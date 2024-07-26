@@ -17,6 +17,7 @@ import (
 type Client struct {
 	conn   *websocket.Conn
 	roomID uint
+	userID uint
 	send   chan []byte
 }
 

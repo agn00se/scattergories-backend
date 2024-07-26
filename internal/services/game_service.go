@@ -10,12 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func StartGame(roomID uint, userID uint) (*models.Game, *models.GameRoomConfig, []*models.GamePrompt, error) {
-	// Verify host
-	if err := verifyGameRoomHost(roomID, userID, common.ErrStartGameNotHost); err != nil {
-		return nil, nil, nil, err
-	}
-
+func StartGame(roomID uint) (*models.Game, *models.GameRoomConfig, []*models.GamePrompt, error) {
 	// Verify no game at the Ongoing or Voting stage
 	if err := verifyNoActiveGameInRoom(roomID); err != nil {
 		return nil, nil, nil, err

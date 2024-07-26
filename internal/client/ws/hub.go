@@ -89,6 +89,12 @@ func (h *Hub) Run() {
 // Each client gets its own instance of a Client struct, which is then managed by the hub. This allows multiple clients to
 // communicate with the server and each other through the WebSocket connection.
 func HandleWebSocket(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		controllers.HandleError(c, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
 	roomID, err := controllers.GetIDParam(c, "room_id")
 	if err != nil {
 		controllers.HandleError(c, http.StatusBadRequest, "Invalid room ID")
@@ -113,7 +119,7 @@ func HandleWebSocket(c *gin.Context) {
 		return
 	}
 
-	client := &Client{conn: conn, roomID: roomID, send: make(chan []byte, 256)}
+	client := &Client{conn: conn, roomID: roomID, userID: userID.(uint), send: make(chan []byte, 256)}
 	HubInstance.register <- client // send the client to the hub.register channel
 
 	// writePump is typically run in a separate goroutine to allow the readPump to handle incoming messages immediately.

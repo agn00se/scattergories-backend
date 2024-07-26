@@ -15,7 +15,7 @@ func RegisterGameRoomRoutes(router *gin.Engine) {
 		gameRoomRoutes.GET("", controllers.GetAllGameRooms)
 		gameRoomRoutes.GET("/:room_id", controllers.GetGameRoom)
 		gameRoomRoutes.POST("", controllers.CreateGameRoom)
-		gameRoomRoutes.DELETE("/:room_id", controllers.DeleteGameRoom)
+		gameRoomRoutes.DELETE("/:room_id", controllers.DeleteGameRoom) // might not need to be exposed as API endpoint
 
 		gameRoomRoutes.PUT("/:room_id/join", controllers.JoinGameRoom)
 		gameRoomRoutes.PUT("/:room_id/leave", controllers.LeaveGameRoom)

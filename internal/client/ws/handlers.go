@@ -36,8 +36,14 @@ func startGame(client *Client, roomID uint, message []byte) {
 		return
 	}
 
+	permitted, err := services.HasPermission(client.userID, services.GameRoomWritePermission, roomID)
+	if err != nil || !permitted {
+		sendError(client, err.Error())
+		return
+	}
+
 	// Start the game
-	game, gameRoomConfig, gamePrompts, err := services.StartGame(roomID, req.HostID)
+	game, gameRoomConfig, gamePrompts, err := services.StartGame(roomID)
 	if err != nil {
 		sendError(client, err.Error())
 		return
@@ -61,6 +67,12 @@ func endGame(client *Client, roomID uint, message []byte) {
 		return
 	}
 
+	permitted, err := services.HasPermission(client.userID, services.GameRoomWritePermission, roomID)
+	if err != nil || !permitted {
+		sendError(client, err.Error())
+		return
+	}
+
 	game, players, err := services.EndGame(roomID, req.GameID, req.HostID)
 	if err != nil {
 		sendError(client, err.Error())
@@ -81,7 +93,7 @@ func submitAnswer(client *Client, roomID uint, message []byte) {
 		return
 	}
 
-	if err := services.CreateOrUpdateAnswer(roomID, req.Answer, req.UserID, req.GamePromptID); err != nil {
+	if err := services.CreateOrUpdateAnswer(roomID, req.Answer, client.userID, req.GamePromptID); err != nil {
 		sendError(client, "Failed to save answer"+err.Error())
 		return
 	}
@@ -103,6 +115,12 @@ func updateGameConfig(client *Client, roomID uint, message []byte) {
 		return
 	}
 
+	permitted, err := services.HasPermission(client.userID, services.GameRoomWritePermission, roomID)
+	if err != nil || !permitted {
+		sendError(client, err.Error())
+		return
+	}
+
 	config := &models.GameRoomConfig{
 		GameRoomID:      roomID,
 		TimeLimit:       req.TimeLimit,
@@ -110,7 +128,7 @@ func updateGameConfig(client *Client, roomID uint, message []byte) {
 		Letter:          req.Letter,
 	}
 
-	config, err := services.UpdateGameConfig(config, req.HostID)
+	config, err = services.UpdateGameConfig(config)
 	if err != nil {
 		sendError(client, err.Error())
 		return
