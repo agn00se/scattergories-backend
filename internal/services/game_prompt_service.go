@@ -2,13 +2,13 @@ package services
 
 import (
 	"scattergories-backend/internal/common"
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
 
 	"gorm.io/gorm"
 )
 
-func getGamePromptsByGameID(gameID uint) ([]*models.GamePrompt, error) {
+func getGamePromptsByGameID(gameID uint) ([]*domain.GamePrompt, error) {
 	return repositories.GetGamePromptsByGameID(gameID)
 }
 
@@ -32,7 +32,7 @@ func createGamePrompts(gameID uint, numberOfPrompts int) error {
 
 	// Create GamePrompt entries for the selected prompts
 	for _, prompt := range prompts {
-		gamePrompt := &models.GamePrompt{
+		gamePrompt := &domain.GamePrompt{
 			GameID:   gameID,
 			PromptID: prompt.ID,
 		}

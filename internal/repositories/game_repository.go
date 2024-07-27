@@ -3,13 +3,13 @@ package repositories
 import (
 	"scattergories-backend/config"
 	"scattergories-backend/internal/common"
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/domain"
 
 	"gorm.io/gorm"
 )
 
-func GetGameByID(id uint) (*models.Game, error) {
-	var game models.Game
+func GetGameByID(id uint) (*domain.Game, error) {
+	var game domain.Game
 	if err := config.DB.First(&game, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, common.ErrGameNotFound
@@ -19,8 +19,8 @@ func GetGameByID(id uint) (*models.Game, error) {
 	return &game, nil
 }
 
-func GetGameByRoomIDAndStatus(roomID uint, statuses ...string) (*models.Game, error) {
-	var game models.Game
+func GetGameByRoomIDAndStatus(roomID uint, statuses ...string) (*domain.Game, error) {
+	var game domain.Game
 	err := config.DB.Where("game_room_id = ? AND status IN ?", roomID, statuses).First(&game).Error
 	if err != nil {
 		return nil, err
@@ -28,11 +28,11 @@ func GetGameByRoomIDAndStatus(roomID uint, statuses ...string) (*models.Game, er
 	return &game, nil
 }
 
-func CreateGame(game *models.Game) error {
+func CreateGame(game *domain.Game) error {
 	return config.DB.Create(game).Error
 
 }
 
-func UpdateGame(game *models.Game) error {
+func UpdateGame(game *domain.Game) error {
 	return config.DB.Save(game).Error
 }

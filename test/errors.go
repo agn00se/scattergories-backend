@@ -10,4 +10,5 @@ var (
 	ErrUserNotInSpecifiedRoom         = "user is not in the specified game room"
 	ErrInvalidRoomID                  = "Invalid room ID"
 	ErrInvalidUserID                  = "Invalid user ID"
+	ErrDeleteUserNotSelf              = "user can only delete themselves"
 )

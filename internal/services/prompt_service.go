@@ -2,11 +2,11 @@ package services
 
 import (
 	"fmt"
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
 )
 
-func getRandomPromptsGivenLimit(numberOfPrompts int) ([]*models.Prompt, error) {
+func getRandomPromptsGivenLimit(numberOfPrompts int) ([]*domain.Prompt, error) {
 	prompts, err := repositories.GetRandomPromptsGivenLimit(numberOfPrompts)
 	if err != nil {
 		return nil, err

@@ -2,13 +2,13 @@ package services
 
 import (
 	"scattergories-backend/internal/common"
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
 	"scattergories-backend/pkg/utils"
 	"time"
 )
 
-func CreateGameRoom(hostID uint, isPrivate bool, passcode string) (*models.GameRoom, error) {
+func CreateGameRoom(hostID uint, isPrivate bool, passcode string) (*domain.GameRoom, error) {
 	// Verify that the host user exists
 	host, err := GetUserByID(hostID)
 	if err != nil {
@@ -21,9 +21,9 @@ func CreateGameRoom(hostID uint, isPrivate bool, passcode string) (*models.GameR
 	}
 
 	// Create Game Room in the database
-	gameRoom := &models.GameRoom{
+	gameRoom := &domain.GameRoom{
 		RoomCode:  utils.GenerateRoomCode(),
-		HostID:    &hostID,
+		HostID:    hostID,
 		IsPrivate: isPrivate,
 		Passcode:  passcode,
 	}
@@ -50,11 +50,11 @@ func CreateGameRoom(hostID uint, isPrivate bool, passcode string) (*models.GameR
 	return gameRoomResponse, nil
 }
 
-func GetAllGameRooms() ([]*models.GameRoom, error) {
+func GetAllGameRooms() ([]*domain.GameRoom, error) {
 	return repositories.GetAllGameRooms()
 }
 
-func GetGameRoomByID(roomID uint) (*models.GameRoom, error) {
+func GetGameRoomByID(roomID uint) (*domain.GameRoom, error) {
 	return repositories.GetGameRoomByID(roomID)
 }
 
@@ -66,7 +66,7 @@ func DeleteGameRoomByID(roomID uint) error {
 	return nil
 }
 
-func LoadDataForRoom(roomID uint) (*models.Game, []*models.Answer, error) {
+func LoadDataForRoom(roomID uint) (*domain.Game, []*domain.Answer, error) {
 	// Get the Ongoing game
 	game, err := getOngoingGameInRoom(roomID)
 	if err != nil {
@@ -74,7 +74,7 @@ func LoadDataForRoom(roomID uint) (*models.Game, []*models.Answer, error) {
 	}
 
 	// Set game status to Voting stage and update endtime
-	game.Status = models.GameStatusVoting
+	game.Status = domain.GameStatusVoting
 	game.EndTime = time.Now()
 	if err := updateGame(game); err != nil {
 		return nil, nil, err
@@ -89,7 +89,7 @@ func LoadDataForRoom(roomID uint) (*models.Game, []*models.Answer, error) {
 	return game, answers, nil
 }
 
-func updateHost(roomID uint, newHostID uint) (*models.GameRoom, error) {
+func updateHost(roomID uint, newHostID uint) (*domain.GameRoom, error) {
 	// Get the game room
 	gameRoom, err := GetGameRoomByID(roomID)
 	if err != nil {
@@ -107,7 +107,7 @@ func updateHost(roomID uint, newHostID uint) (*models.GameRoom, error) {
 	}
 
 	// Update host
-	gameRoom.HostID = &newHostID
+	gameRoom.HostID = newHostID
 	repositories.UpdateGameRoom(gameRoom)
 
 	// Reload the game room with the assoicated host
@@ -124,7 +124,7 @@ func verifyGameRoomHost(roomID uint, userID uint, errorMessage error) error {
 		return err
 	}
 
-	if gameRoom.HostID != nil && *gameRoom.HostID != userID {
+	if gameRoom.HostID != userID {
 		return errorMessage
 	}
 	return nil

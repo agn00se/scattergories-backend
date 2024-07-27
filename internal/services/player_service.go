@@ -1,19 +1,19 @@
 package services
 
 import (
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
 )
 
-func getPlayersByGameID(gameID uint) ([]*models.Player, error) {
+func getPlayersByGameID(gameID uint) ([]*domain.Player, error) {
 	return repositories.GetPlayersByGameID(gameID)
 }
 
-func getPlayerByUserIDAndGameID(userID uint, gameID uint) (*models.Player, error) {
+func getPlayerByUserIDAndGameID(userID uint, gameID uint) (*domain.Player, error) {
 	return repositories.GetPlayerByUserIDGameID(userID, gameID)
 }
 
-func createPlayersInGame(users []*models.User, gameID uint) error {
+func createPlayersInGame(users []*domain.User, gameID uint) error {
 	for _, user := range users {
 		if err := createPlayer(user.ID, gameID); err != nil {
 			return err
@@ -23,7 +23,7 @@ func createPlayersInGame(users []*models.User, gameID uint) error {
 }
 
 func createPlayer(userID uint, gameID uint) error {
-	gamePlayer := &models.Player{
+	gamePlayer := &domain.Player{
 		UserID: userID,
 		GameID: gameID,
 		Score:  0,

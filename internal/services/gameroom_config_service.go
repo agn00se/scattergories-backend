@@ -1,7 +1,7 @@
 package services
 
 import (
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
 	"scattergories-backend/pkg/utils"
 	"strings"
@@ -12,7 +12,7 @@ var (
 	defaultNumberOfPrompts = 10
 )
 
-func UpdateGameConfig(request *models.GameRoomConfig) (*models.GameRoomConfig, error) {
+func UpdateGameConfig(request *domain.GameRoomConfig) (*domain.GameRoomConfig, error) {
 	// Fetch game room config
 	gameRoomConfig, err := getGameRoomConfigByRoomID(request.GameRoomID)
 	if err != nil {
@@ -31,12 +31,12 @@ func UpdateGameConfig(request *models.GameRoomConfig) (*models.GameRoomConfig, e
 	return gameRoomConfig, nil
 }
 
-func getGameRoomConfigByRoomID(roomID uint) (*models.GameRoomConfig, error) {
+func getGameRoomConfigByRoomID(roomID uint) (*domain.GameRoomConfig, error) {
 	return repositories.GetGameRoomConfigByRoomID(roomID)
 }
 
 func createDefaultGameRoomConfig(gameRoomID uint) error {
-	gameRoomConfig := &models.GameRoomConfig{
+	gameRoomConfig := &domain.GameRoomConfig{
 		GameRoomID:      gameRoomID,
 		TimeLimit:       defaultTimeLimit,
 		NumberOfPrompts: defaultNumberOfPrompts,

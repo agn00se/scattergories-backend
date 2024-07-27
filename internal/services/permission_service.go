@@ -24,6 +24,11 @@ func HasPermission(userID uint, permissionType PermissionType, resourceID uint) 
 
 // GetGameRoom
 func hasGameRoomReadPermission(userID uint, resourceID uint) (bool, error) {
+	// Verify game room exists
+	if _, err := GetGameRoomByID(resourceID); err != nil {
+		return false, err
+	}
+
 	// Verify user exists
 	user, err := GetUserByID(userID)
 	if err != nil {
@@ -50,7 +55,7 @@ func hasGameRoomWritePermission(userID uint, resourceID uint) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if *room.HostID != userID {
+	if room.HostID != userID {
 		return false, common.ErrGameRoomNotHost
 	}
 	return true, nil

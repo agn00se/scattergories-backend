@@ -2,8 +2,8 @@ package main
 
 import (
 	"scattergories-backend/config"
-	"scattergories-backend/internal/client/routes"
-	"scattergories-backend/internal/client/ws"
+	"scattergories-backend/internal/api/routes"
+	"scattergories-backend/internal/api/websocket"
 	"scattergories-backend/pkg/validators"
 
 	"github.com/gin-gonic/gin"
@@ -17,7 +17,7 @@ func main() {
 	config.InitRedis()
 	config.LoadPrompts()
 
-	go ws.HubInstance.Run()
+	go websocket.HubInstance.Run()
 
 	router := gin.Default()
 	routes.RegisterRoutes(router)

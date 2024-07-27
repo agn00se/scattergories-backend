@@ -78,7 +78,7 @@ func LeaveGameRoom(userID uint, roomID uint) error {
 	}
 
 	// Check if the user is the host and assign a new host if needed
-	if gameRoom.HostID != nil && *gameRoom.HostID == userID {
+	if gameRoom.HostID == userID {
 		if _, err := updateHost(roomID, usersInRoom[0].ID); err != nil {
 			return err
 		}

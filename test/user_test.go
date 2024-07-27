@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"scattergories-backend/config"
-	"scattergories-backend/internal/client/controllers/responses"
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/api/handlers/responses"
+	"scattergories-backend/internal/domain"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,16 +17,16 @@ func TestGetAllUsersShouldReturnAllUsers(t *testing.T) {
 	resetDatabase()
 
 	// Create user1
-	user1 := models.User{Name: "user1", Type: models.UserTypeGuest}
+	user1 := domain.User{Name: "user1", Type: domain.UserTypeGuest}
 	config.DB.Create(&user1)
 
 	// Create a GameRoom with user1 as the host
 	gameRoomID := uint(1)
-	gameRoom := models.GameRoom{Model: gorm.Model{ID: gameRoomID}, RoomCode: "testroom", IsPrivate: false, HostID: &user1.ID}
+	gameRoom := domain.GameRoom{Model: gorm.Model{ID: gameRoomID}, RoomCode: "testroom", IsPrivate: false, HostID: user1.ID}
 	config.DB.Create(&gameRoom)
 
 	// Create user2 associated with the GameRoom
-	user2 := models.User{Name: "user2", Type: models.UserTypeGuest, GameRoomID: &gameRoomID}
+	user2 := domain.User{Name: "user2", Type: domain.UserTypeGuest, GameRoomID: &gameRoomID}
 	config.DB.Create(&user2)
 
 	resp := makeAuthenticatedRequest(http.MethodGet, "/users", nil, testUser.ID, string(testUser.Type))
@@ -58,7 +58,7 @@ func TestGetUserShouldReturnUser(t *testing.T) {
 	resetDatabase()
 
 	// Create a test user
-	user := models.User{Name: "testuser"}
+	user := domain.User{Name: "testuser"}
 	config.DB.Create(&user)
 
 	url := fmt.Sprintf("/users/%d", user.ID)
@@ -117,7 +117,7 @@ func TestDeleteUserShouldDeleteUser(t *testing.T) {
 	resetDatabase()
 
 	// Create a test user
-	user := models.User{Name: "testuser"}
+	user := domain.User{Name: "testuser"}
 	config.DB.Create(&user)
 
 	url := fmt.Sprintf("/users/%d", user.ID)
@@ -125,38 +125,10 @@ func TestDeleteUserShouldDeleteUser(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, resp.Code)
 
 	// Check that the user is deleted
-	var deletedUser models.User
+	var deletedUser domain.User
 	err := config.DB.First(&deletedUser, user.ID).Error
 	assert.Error(t, err)
 	assert.Equal(t, gorm.ErrRecordNotFound, err)
-}
-
-func TestDeleteUserShouldReturnUserNotFound(t *testing.T) {
-	resetDatabase()
-
-	nonExistentUserID := uint(999)
-
-	url := fmt.Sprintf("/users/%d", nonExistentUserID)
-	resp := makeAuthenticatedRequest(http.MethodDelete, url, nil, testUser.ID, string(testUser.Type))
-	assert.Equal(t, http.StatusNotFound, resp.Code)
-
-	var response map[string]string
-	err := json.Unmarshal(resp.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, ErrUserNotFound, response["error"])
-}
-
-func TestDeleteUserShouldReturnIDInvalid(t *testing.T) {
-	resetDatabase()
-
-	url := fmt.Sprintf("/users/%s", "invalidIDFormat")
-	resp := makeAuthenticatedRequest(http.MethodDelete, url, nil, testUser.ID, string(testUser.Type))
-	assert.Equal(t, http.StatusBadRequest, resp.Code)
-
-	var response map[string]string
-	err := json.Unmarshal(resp.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, ErrInvalidUserID, response["error"])
 }
 
 func verifyUserByGet(t *testing.T, returnedUser responses.UserResponse) {

@@ -1,7 +1,7 @@
 package services
 
 import (
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
 
 	"gorm.io/gorm"
@@ -27,7 +27,7 @@ func CreateOrUpdateAnswer(roomID uint, answerText string, userID uint, gamePromp
 		return repositories.SaveAnswer(existingAnswer)
 	} else if err != gorm.ErrRecordNotFound {
 		// Create a new answer if no existing answer is found
-		answer := &models.Answer{
+		answer := &domain.Answer{
 			PlayerID:     player.ID,
 			GamePromptID: gamePromptID,
 			Answer:       answerText,
@@ -38,6 +38,6 @@ func CreateOrUpdateAnswer(roomID uint, answerText string, userID uint, gamePromp
 	}
 }
 
-func getAnswersByGameID(gameID uint) ([]*models.Answer, error) {
+func getAnswersByGameID(gameID uint) ([]*domain.Answer, error) {
 	return repositories.GetAnswersByGameID(gameID)
 }

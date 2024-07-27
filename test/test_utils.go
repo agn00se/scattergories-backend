@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"scattergories-backend/config"
-	"scattergories-backend/internal/client/routes"
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/api/routes"
+	"scattergories-backend/internal/domain"
 	"scattergories-backend/pkg/validators"
 	"time"
 
@@ -20,7 +20,7 @@ import (
 var (
 	router    *gin.Engine
 	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
-	testUser  models.User
+	testUser  domain.User
 )
 
 func testSetup() {
@@ -91,10 +91,10 @@ func generateTestToken(userID uint, userType string) (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
-func createTestUser() models.User {
-	user := models.User{
+func createTestUser() domain.User {
+	user := domain.User{
 		Name: "Test User",
-		Type: models.UserTypeGuest,
+		Type: domain.UserTypeGuest,
 	}
 	result := config.DB.Create(&user)
 	if result.Error != nil {
@@ -115,16 +115,16 @@ func resetDatabase() {
 }
 
 func dropTables() {
-	config.DB.Migrator().DropTable(&models.User{})
-	config.DB.Migrator().DropTable(&models.GameRoom{})
-	config.DB.Migrator().DropTable(&models.Game{})
-	config.DB.Migrator().DropTable(&models.Player{})
-	config.DB.Migrator().DropTable(&models.GamePrompt{})
-	config.DB.Migrator().DropTable(&models.Answer{})
-	config.DB.Migrator().DropTable(&models.GameRoomConfig{})
-	config.DB.Migrator().DropTable(&models.Prompt{})
+	config.DB.Migrator().DropTable(&domain.User{})
+	config.DB.Migrator().DropTable(&domain.GameRoom{})
+	config.DB.Migrator().DropTable(&domain.Game{})
+	config.DB.Migrator().DropTable(&domain.Player{})
+	config.DB.Migrator().DropTable(&domain.GamePrompt{})
+	config.DB.Migrator().DropTable(&domain.Answer{})
+	config.DB.Migrator().DropTable(&domain.GameRoomConfig{})
+	config.DB.Migrator().DropTable(&domain.Prompt{})
 }
 
 func migrateTables() {
-	config.DB.AutoMigrate(&models.GameRoom{}, &models.User{}, &models.Game{}, &models.Player{}, &models.GameRoomConfig{}, &models.Prompt{}, &models.GamePrompt{}, &models.Answer{})
+	config.DB.AutoMigrate(&domain.GameRoom{}, &domain.User{}, &domain.Game{}, &domain.Player{}, &domain.GameRoomConfig{}, &domain.Prompt{}, &domain.GamePrompt{}, &domain.Answer{})
 }

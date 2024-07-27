@@ -5,7 +5,7 @@ import (
 	"os"
 	"scattergories-backend/config"
 	"scattergories-backend/internal/common"
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/domain"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -76,7 +76,7 @@ func RefreshTokens(refreshToken string) (string, string, error) {
 	}
 
 	// Generate new access token
-	userType := models.UserType(claims["user_type"].(string))
+	userType := domain.UserType(claims["user_type"].(string))
 	newAccessToken, err := GenerateJWT(userID, userType)
 	if err != nil {
 		return "", "", err
@@ -91,7 +91,7 @@ func RefreshTokens(refreshToken string) (string, string, error) {
 	return newAccessToken, newRefreshToken, nil
 }
 
-func GenerateJWT(userID uint, userType models.UserType) (string, error) {
+func GenerateJWT(userID uint, userType domain.UserType) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id":   userID,
 		"user_type": string(userType),

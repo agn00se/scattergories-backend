@@ -5,7 +5,7 @@ import (
 	"context"
 	"log"
 	"os"
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/domain"
 	"strconv"
 
 	"github.com/joho/godotenv"
@@ -39,7 +39,7 @@ func ConnectDB() {
 	}
 
 	// Automatically migrate the schema for all models. Order is important.
-	err = DB.AutoMigrate(&models.GameRoom{}, &models.User{}, &models.Game{}, &models.Player{}, &models.GameRoomConfig{}, &models.Prompt{}, &models.GamePrompt{}, &models.Answer{})
+	err = DB.AutoMigrate(&domain.GameRoom{}, &domain.User{}, &domain.Game{}, &domain.Player{}, &domain.GameRoomConfig{}, &domain.Prompt{}, &domain.GamePrompt{}, &domain.Answer{})
 	if err != nil {
 		log.Fatal("Failed to migrate database schema:", err)
 	}
@@ -71,8 +71,8 @@ func LoadPrompts() {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		promptText := scanner.Text()
-		prompt := models.Prompt{Text: promptText}
-		if err := DB.FirstOrCreate(&prompt, models.Prompt{Text: promptText}).Error; err != nil {
+		prompt := domain.Prompt{Text: promptText}
+		if err := DB.FirstOrCreate(&prompt, domain.Prompt{Text: promptText}).Error; err != nil {
 			log.Printf("Failed to load prompt: %v", err)
 		}
 	}

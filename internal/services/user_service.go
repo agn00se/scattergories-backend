@@ -1,49 +1,42 @@
 package services
 
 import (
-	"fmt"
-	"math/rand"
 	"scattergories-backend/internal/common"
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
-	"time"
+	"scattergories-backend/pkg/utils"
 
 	"github.com/lib/pq"
 )
 
 const uniqueViolationCode = "23505"
 
-func init() {
-	seed := time.Now().UnixNano()
-	rand.New(rand.NewSource(seed))
-}
-
-func GetAllUsers() ([]*models.User, error) {
+func GetAllUsers() ([]*domain.User, error) {
 	return repositories.GetAllUsers()
 }
 
-func GetUserByID(id uint) (*models.User, error) {
+func GetUserByID(id uint) (*domain.User, error) {
 	return repositories.GetUserByID(id)
 }
 
-func CreateGuestUser() (*models.User, error) {
-	guestName := generateRandomGuestName()
+func CreateGuestUser() (*domain.User, error) {
+	guestName := utils.GenerateGuestName()
 
-	user := &models.User{
-		Type: models.UserTypeGuest,
+	user := &domain.User{
+		Type: domain.UserTypeGuest,
 		Name: guestName,
 	}
 	return createUser(user)
 }
 
-func CreateRegisteredUser(name string, email string, password string) (*models.User, error) {
+func CreateRegisteredUser(name string, email string, password string) (*domain.User, error) {
 	hash, salt, err := generateHash(password)
 	if err != nil {
 		return nil, err
 	}
 
-	user := &models.User{
-		Type:         models.UserTypeRegistered,
+	user := &domain.User{
+		Type:         domain.UserTypeRegistered,
 		Name:         name,
 		Email:        &email,
 		PasswordHash: &hash,
@@ -60,19 +53,15 @@ func DeleteUserByID(id uint) error {
 	return nil
 }
 
-func generateRandomGuestName() string {
-	return fmt.Sprintf("Guest%d", rand.Intn(10000))
-}
-
-func getUserByEmail(email string) (*models.User, error) {
+func getUserByEmail(email string) (*domain.User, error) {
 	return repositories.GetUserByEmail(email)
 }
 
-func getUsersByGameRoomID(roomID uint) ([]*models.User, error) {
+func getUsersByGameRoomID(roomID uint) ([]*domain.User, error) {
 	return repositories.GetUsersByGameRoomID(roomID)
 }
 
-func createUser(user *models.User) (*models.User, error) {
+func createUser(user *domain.User) (*domain.User, error) {
 	if err := repositories.CreateUser(user); err != nil {
 		// Return error if the email is already used
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == uniqueViolationCode {
@@ -83,6 +72,6 @@ func createUser(user *models.User) (*models.User, error) {
 	return user, nil
 }
 
-func updateUser(user *models.User) error {
+func updateUser(user *domain.User) error {
 	return repositories.UpdateUser(user)
 }

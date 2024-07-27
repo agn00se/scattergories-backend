@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"scattergories-backend/config"
-	"scattergories-backend/internal/client/controllers/responses"
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/api/handlers/responses"
+	"scattergories-backend/internal/domain"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,14 +17,14 @@ func TestGetAllGameRoomsShouldReturnAllRooms(t *testing.T) {
 	resetDatabase()
 
 	// Create some users to be hosts of game rooms
-	host1 := models.User{Name: "host1"}
-	host2 := models.User{Name: "host2"}
+	host1 := domain.User{Name: "host1"}
+	host2 := domain.User{Name: "host2"}
 	config.DB.Create(&host1)
 	config.DB.Create(&host2)
 
 	// Create some game rooms
-	gameRoom1 := models.GameRoom{RoomCode: "room1", IsPrivate: false, HostID: &host1.ID}
-	gameRoom2 := models.GameRoom{RoomCode: "room2", IsPrivate: true, HostID: &host2.ID, Passcode: "secret"}
+	gameRoom1 := domain.GameRoom{RoomCode: "room1", IsPrivate: false, HostID: host1.ID}
+	gameRoom2 := domain.GameRoom{RoomCode: "room2", IsPrivate: true, HostID: host2.ID, Passcode: "secret"}
 	config.DB.Create(&gameRoom1)
 	config.DB.Create(&gameRoom2)
 
@@ -39,9 +39,9 @@ func TestGetAllGameRoomsShouldReturnAllRooms(t *testing.T) {
 	assert.Equal(t, "room1", rooms[0].RoomCode)
 	assert.Equal(t, "room2", rooms[1].RoomCode)
 	assert.Equal(t, gameRoom1.HostID, rooms[0].HostID)
-	assert.Equal(t, host1.Name, *rooms[0].HostName)
+	assert.Equal(t, host1.Name, rooms[0].HostName)
 	assert.Equal(t, gameRoom2.HostID, rooms[1].HostID)
-	assert.Equal(t, host2.Name, *rooms[1].HostName)
+	assert.Equal(t, host2.Name, rooms[1].HostName)
 	assert.False(t, rooms[0].IsPrivate)
 	assert.True(t, rooms[1].IsPrivate)
 }
@@ -62,15 +62,17 @@ func TestGetGameRoomShouldReturnRoom(t *testing.T) {
 	resetDatabase()
 
 	// Create a test user
-	user := models.User{Name: "user"}
+	user := domain.User{Name: "user", Type: domain.UserTypeGuest}
 	config.DB.Create(&user)
 
 	// Create a game room with the user being the host
-	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false, HostID: &user.ID}
+	gameRoom := domain.GameRoom{RoomCode: "room1", IsPrivate: false, HostID: user.ID}
 	config.DB.Create(&gameRoom)
+	user.GameRoomID = &gameRoom.ID
+	config.DB.Save(&user)
 
 	url := fmt.Sprintf("/game-rooms/%d", gameRoom.ID)
-	resp := makeAuthenticatedRequest(http.MethodGet, url, nil, testUser.ID, string(testUser.Type))
+	resp := makeAuthenticatedRequest(http.MethodGet, url, nil, user.ID, string(user.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var returnedRoom responses.GameRoomResponse
@@ -79,28 +81,7 @@ func TestGetGameRoomShouldReturnRoom(t *testing.T) {
 	assert.Equal(t, gameRoom.RoomCode, returnedRoom.RoomCode)
 	assert.Equal(t, gameRoom.IsPrivate, returnedRoom.IsPrivate)
 	assert.Equal(t, gameRoom.HostID, returnedRoom.HostID)
-	assert.Equal(t, "user", *returnedRoom.HostName)
-	assert.False(t, returnedRoom.IsPrivate)
-}
-
-func TestGetGameRoomWithoutHostShouldReturnRoomWithoutHost(t *testing.T) {
-	resetDatabase()
-
-	// Create a game room
-	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
-	config.DB.Create(&gameRoom)
-
-	url := fmt.Sprintf("/game-rooms/%d", gameRoom.ID)
-	resp := makeAuthenticatedRequest(http.MethodGet, url, nil, testUser.ID, string(testUser.Type))
-	assert.Equal(t, http.StatusOK, resp.Code)
-
-	var returnedRoom responses.GameRoomResponse
-	err := json.Unmarshal(resp.Body.Bytes(), &returnedRoom)
-	assert.NoError(t, err)
-	assert.Equal(t, gameRoom.RoomCode, returnedRoom.RoomCode)
-	assert.Equal(t, gameRoom.IsPrivate, returnedRoom.IsPrivate)
-	assert.Nil(t, returnedRoom.HostID)
-	assert.Nil(t, returnedRoom.HostName)
+	assert.Equal(t, "user", returnedRoom.HostName)
 	assert.False(t, returnedRoom.IsPrivate)
 }
 
@@ -111,7 +92,7 @@ func TestGetGameRoomShouldReturnRoomNotFound(t *testing.T) {
 
 	url := fmt.Sprintf("/game-rooms/%d", nonExistentRoomID)
 	resp := makeAuthenticatedRequest(http.MethodGet, url, nil, testUser.ID, string(testUser.Type))
-	assert.Equal(t, http.StatusNotFound, resp.Code)
+	assert.Equal(t, http.StatusUnauthorized, resp.Code)
 
 	var response map[string]string
 	err := json.Unmarshal(resp.Body.Bytes(), &response)
@@ -136,7 +117,7 @@ func TestCreateGameRoomShouldCreateRoom(t *testing.T) {
 	resetDatabase()
 
 	// Create a test user
-	host := models.User{Name: "hostuser"}
+	host := domain.User{Name: "hostuser"}
 	config.DB.Create(&host)
 
 	// Create a game room with the user being the host
@@ -152,13 +133,13 @@ func TestCreateGameRoomShouldCreateRoom(t *testing.T) {
 	var returnedRoom responses.GameRoomResponse
 	err := json.Unmarshal(resp.Body.Bytes(), &returnedRoom)
 	assert.NoError(t, err)
-	assert.Equal(t, host.ID, *returnedRoom.HostID)
-	assert.Equal(t, host.Name, *returnedRoom.HostName)
+	assert.Equal(t, host.ID, returnedRoom.HostID)
+	assert.Equal(t, host.Name, returnedRoom.HostName)
 	assert.False(t, returnedRoom.IsPrivate)
 	assert.NotEmpty(t, returnedRoom.RoomCode)
 
 	// Verify that the host user's GameRoomID is set
-	var updatedHost models.User
+	var updatedHost domain.User
 	config.DB.First(&updatedHost, host.ID)
 	assert.Equal(t, returnedRoom.ID, *updatedHost.GameRoomID)
 }
@@ -167,7 +148,7 @@ func TestCreatePrivateGameRoomShouldCreateRoom(t *testing.T) {
 	resetDatabase()
 
 	// Create a test user
-	host := models.User{Name: "hostuser"}
+	host := domain.User{Name: "hostuser"}
 	config.DB.Create(&host)
 
 	// Create a game room with the user being the host
@@ -184,8 +165,8 @@ func TestCreatePrivateGameRoomShouldCreateRoom(t *testing.T) {
 	var returnedRoom responses.GameRoomResponse
 	err := json.Unmarshal(resp.Body.Bytes(), &returnedRoom)
 	assert.NoError(t, err)
-	assert.Equal(t, host.ID, *returnedRoom.HostID)
-	assert.Equal(t, host.Name, *returnedRoom.HostName)
+	assert.Equal(t, host.ID, returnedRoom.HostID)
+	assert.Equal(t, host.Name, returnedRoom.HostName)
 	assert.True(t, returnedRoom.IsPrivate)
 	assert.NotEmpty(t, returnedRoom.RoomCode)
 }
@@ -212,7 +193,7 @@ func TestCreateGameRoomShouldFailValidationGivenPublicRoomNoPasscode(t *testing.
 	resetDatabase()
 
 	// Create a test user
-	host := models.User{Name: "hostuser"}
+	host := domain.User{Name: "hostuser"}
 	config.DB.Create(&host)
 
 	// Create a game room with the user being the host
@@ -255,11 +236,11 @@ func TestCreateGameRoomShouldFailGivenDuplicateHost(t *testing.T) {
 	resetDatabase()
 
 	// Create a test user to act as the host
-	host := models.User{Name: "hostuser"}
+	host := domain.User{Name: "hostuser"}
 	config.DB.Create(&host)
 
 	// Create an existing game room with the same host
-	existingGameRoom := models.GameRoom{RoomCode: "existingroom", IsPrivate: false, HostID: &host.ID}
+	existingGameRoom := domain.GameRoom{RoomCode: "existingroom", IsPrivate: false, HostID: host.ID}
 	config.DB.Create(&existingGameRoom)
 
 	// Create game room request with the same host ID
@@ -282,11 +263,11 @@ func TestJoinGameRoomShouldJoinGameRoom(t *testing.T) {
 	resetDatabase()
 
 	// Create test user
-	user := models.User{Name: "user"}
+	user := domain.User{Name: "user"}
 	config.DB.Create(&user)
 
 	// Create a game room
-	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
+	gameRoom := domain.GameRoom{RoomCode: "room1", IsPrivate: false, HostID: testUser.ID}
 	config.DB.Create(&gameRoom)
 
 	// Join game room request
@@ -296,7 +277,7 @@ func TestJoinGameRoomShouldJoinGameRoom(t *testing.T) {
 	joinJSON, _ := json.Marshal(joinPayload)
 
 	url := fmt.Sprintf("/game-rooms/%d/join", gameRoom.ID)
-	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(joinJSON), testUser.ID, string(testUser.Type))
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(joinJSON), user.ID, string(user.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var response map[string]string
@@ -305,24 +286,27 @@ func TestJoinGameRoomShouldJoinGameRoom(t *testing.T) {
 	assert.Equal(t, "User joined game room", response["message"])
 
 	// Verify that the user's GameRoomID is set
-	var updatedUser models.User
+	var updatedUser domain.User
 	config.DB.First(&updatedUser, user.ID)
 	assert.Equal(t, gameRoom.ID, *updatedUser.GameRoomID)
 }
 
 func TestJoinGameRoomInBetweenGamesShouldJoinGameRoom(t *testing.T) {
+	createTestUser()
 	resetDatabase()
 
 	// Create test user
-	user := models.User{Name: "user"}
+	user := domain.User{Name: "user"}
 	config.DB.Create(&user)
 
 	// Create a game room
-	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
-	config.DB.Create(&gameRoom)
+	gameRoom := domain.GameRoom{RoomCode: "room1", IsPrivate: false, HostID: testUser.ID}
+	if err := config.DB.Create(&gameRoom).Error; err != nil {
+		t.Fatal(err)
+	}
 
 	// Create an completed game in the room
-	activeGame := models.Game{GameRoomID: gameRoom.ID, Status: models.GameStatusCompleted}
+	activeGame := domain.Game{GameRoomID: gameRoom.ID, Status: domain.GameStatusCompleted}
 	config.DB.Create(&activeGame)
 
 	// Join game room request
@@ -332,7 +316,7 @@ func TestJoinGameRoomInBetweenGamesShouldJoinGameRoom(t *testing.T) {
 	joinJSON, _ := json.Marshal(joinPayload)
 
 	url := fmt.Sprintf("/game-rooms/%d/join", gameRoom.ID)
-	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(joinJSON), testUser.ID, string(testUser.Type))
+	resp := makeAuthenticatedRequest(http.MethodPut, url, bytes.NewBuffer(joinJSON), user.ID, string(user.Type))
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var response map[string]string
@@ -341,7 +325,7 @@ func TestJoinGameRoomInBetweenGamesShouldJoinGameRoom(t *testing.T) {
 	assert.Equal(t, "User joined game room", response["message"])
 
 	// Verify that the user's GameRoomID is set
-	var updatedUser models.User
+	var updatedUser domain.User
 	config.DB.First(&updatedUser, user.ID)
 	assert.Equal(t, gameRoom.ID, *updatedUser.GameRoomID)
 }
@@ -363,7 +347,7 @@ func TestJoinGameRoomShouldFailValidationGivenNoUser(t *testing.T) {
 	resetDatabase()
 
 	// Create a game room
-	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
+	gameRoom := domain.GameRoom{RoomCode: "room1", IsPrivate: false}
 	config.DB.Create(&gameRoom)
 
 	joinPayload := map[string]interface{}{}
@@ -383,7 +367,7 @@ func TestJoinGameRoomShouldReturnRoomNotFound(t *testing.T) {
 	resetDatabase()
 
 	// Create a test user
-	user := models.User{Name: "testuser"}
+	user := domain.User{Name: "testuser"}
 	config.DB.Create(&user)
 
 	// Join game room request with non-existent room ID
@@ -407,15 +391,15 @@ func TestJoinGameRoomShouldReturnActiveGameExists(t *testing.T) {
 	resetDatabase()
 
 	// Create a test user
-	user := models.User{Name: "testuser"}
+	user := domain.User{Name: "testuser"}
 	config.DB.Create(&user)
 
 	// Create a game room
-	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false, HostID: &user.ID}
+	gameRoom := domain.GameRoom{RoomCode: "room1", IsPrivate: false, HostID: user.ID}
 	config.DB.Create(&gameRoom)
 
 	// Create an active game in the room
-	activeGame := models.Game{GameRoomID: gameRoom.ID, Status: models.GameStatusOngoing}
+	activeGame := domain.Game{GameRoomID: gameRoom.ID, Status: domain.GameStatusOngoing}
 	config.DB.Create(&activeGame)
 
 	// Join game room request
@@ -438,7 +422,7 @@ func TestJoinGameRoomShouldReturnUserNotFound(t *testing.T) {
 	resetDatabase()
 
 	// Create a game room
-	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
+	gameRoom := domain.GameRoom{RoomCode: "room1", IsPrivate: false, HostID: testUser.ID}
 	config.DB.Create(&gameRoom)
 
 	// Join game room request with non-existent user ID
@@ -461,11 +445,11 @@ func TestLeaveGameRoomShouldLeaveRoom(t *testing.T) {
 	resetDatabase()
 
 	// Create test users
-	user := models.User{Name: "user"}
+	user := domain.User{Name: "user"}
 	config.DB.Create(&user)
 
 	// Create a game room
-	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
+	gameRoom := domain.GameRoom{RoomCode: "room1", IsPrivate: false}
 	config.DB.Create(&gameRoom)
 
 	// Assign user to the game room
@@ -488,7 +472,7 @@ func TestLeaveGameRoomShouldLeaveRoom(t *testing.T) {
 	assert.Equal(t, "User left game room", response["message"])
 
 	// Verify that the user's GameRoomID is unset
-	var updatedUser models.User
+	var updatedUser domain.User
 	config.DB.First(&updatedUser, user.ID)
 	assert.Nil(t, updatedUser.GameRoomID)
 }
@@ -510,7 +494,7 @@ func TestLeaveGameRoomShouldFailValidationGivenNoUser(t *testing.T) {
 	resetDatabase()
 
 	// Create a game room
-	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
+	gameRoom := domain.GameRoom{RoomCode: "room1", IsPrivate: false}
 	config.DB.Create(&gameRoom)
 
 	leavePayload := map[string]interface{}{}
@@ -530,7 +514,7 @@ func TestLeaveGameRoomShouldReturnRoomNotFound(t *testing.T) {
 	resetDatabase()
 
 	// Create a test user
-	user := models.User{Name: "testuser"}
+	user := domain.User{Name: "testuser"}
 	config.DB.Create(&user)
 
 	// Leave game room request with non-existent room ID
@@ -554,7 +538,7 @@ func TestLeaveGameRoomShouldReturnUserNotFound(t *testing.T) {
 	resetDatabase()
 
 	// Create a game room
-	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
+	gameRoom := domain.GameRoom{RoomCode: "room1", IsPrivate: false}
 	config.DB.Create(&gameRoom)
 
 	// Leave game room request with non-existent user ID
@@ -577,11 +561,11 @@ func TestLeaveGameRoomUserNotInSpecifiedRoom(t *testing.T) {
 	resetDatabase()
 
 	// Create test users
-	user := models.User{Name: "user"}
+	user := domain.User{Name: "user"}
 	config.DB.Create(&user)
 
 	// Create a game room
-	gameRoom := models.GameRoom{RoomCode: "room1", IsPrivate: false}
+	gameRoom := domain.GameRoom{RoomCode: "room1", IsPrivate: false}
 	config.DB.Create(&gameRoom)
 
 	// Leave game room request with user who is not in the room

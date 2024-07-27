@@ -2,7 +2,7 @@ package services
 
 import (
 	"scattergories-backend/internal/common"
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
 
 	"time"
@@ -10,16 +10,16 @@ import (
 	"gorm.io/gorm"
 )
 
-func StartGame(roomID uint) (*models.Game, *models.GameRoomConfig, []*models.GamePrompt, error) {
+func StartGame(roomID uint) (*domain.Game, *domain.GameRoomConfig, []*domain.GamePrompt, error) {
 	// Verify no game at the Ongoing or Voting stage
 	if err := verifyNoActiveGameInRoom(roomID); err != nil {
 		return nil, nil, nil, err
 	}
 
 	// Create a new game with the status set to Ongoing
-	game := &models.Game{
+	game := &domain.Game{
 		GameRoomID: roomID,
-		Status:     models.GameStatusOngoing,
+		Status:     domain.GameStatusOngoing,
 		StartTime:  time.Now(),
 	}
 	if err := repositories.CreateGame(game); err != nil {
@@ -55,7 +55,7 @@ func StartGame(roomID uint) (*models.Game, *models.GameRoomConfig, []*models.Gam
 	return game, gameRoomConfig, gamePrompts, nil
 }
 
-func EndGame(roomID uint, gameID uint, userID uint) (*models.Game, []*models.Player, error) {
+func EndGame(roomID uint, gameID uint, userID uint) (*domain.Game, []*domain.Player, error) {
 	// Verify host
 	if err := verifyGameRoomHost(roomID, userID, common.ErrEndGameNotHost); err != nil {
 		return nil, nil, err
@@ -66,7 +66,7 @@ func EndGame(roomID uint, gameID uint, userID uint) (*models.Game, []*models.Pla
 	if err != nil {
 		return nil, nil, err
 	}
-	game.Status = models.GameStatusCompleted
+	game.Status = domain.GameStatusCompleted
 	game.EndTime = time.Now()
 	updateGame(game)
 
@@ -79,16 +79,16 @@ func EndGame(roomID uint, gameID uint, userID uint) (*models.Game, []*models.Pla
 	return game, players, nil
 }
 
-func getGameByID(gameID uint) (*models.Game, error) {
+func getGameByID(gameID uint) (*domain.Game, error) {
 	return repositories.GetGameByID(gameID)
 }
 
-func updateGame(game *models.Game) error {
+func updateGame(game *domain.Game) error {
 	return repositories.UpdateGame(game)
 }
 
 func verifyNoActiveGameInRoom(roomID uint) error {
-	_, err := repositories.GetGameByRoomIDAndStatus(roomID, string(models.GameStatusOngoing), string(models.GameStatusVoting))
+	_, err := repositories.GetGameByRoomIDAndStatus(roomID, string(domain.GameStatusOngoing), string(domain.GameStatusVoting))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil // No active games found
@@ -98,8 +98,8 @@ func verifyNoActiveGameInRoom(roomID uint) error {
 	return common.ErrActiveGameExists
 }
 
-func getOngoingGameInRoom(roomID uint) (*models.Game, error) {
-	game, err := repositories.GetGameByRoomIDAndStatus(roomID, string(models.GameStatusOngoing))
+func getOngoingGameInRoom(roomID uint) (*domain.Game, error) {
+	game, err := repositories.GetGameByRoomIDAndStatus(roomID, string(domain.GameStatusOngoing))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, common.ErrNoOngoingGameInRoom // No ongoing games found

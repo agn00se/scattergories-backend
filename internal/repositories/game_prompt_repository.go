@@ -2,11 +2,11 @@ package repositories
 
 import (
 	"scattergories-backend/config"
-	"scattergories-backend/internal/models"
+	"scattergories-backend/internal/domain"
 )
 
-func GetGamePromptsByGameID(gameID uint) ([]*models.GamePrompt, error) {
-	var gamePrompts []*models.GamePrompt
+func GetGamePromptsByGameID(gameID uint) ([]*domain.GamePrompt, error) {
+	var gamePrompts []*domain.GamePrompt
 	if err := config.DB.Where("game_id = ?", gameID).Preload("Prompt").Find(&gamePrompts).Error; err != nil {
 		return nil, err
 	}
@@ -14,13 +14,13 @@ func GetGamePromptsByGameID(gameID uint) ([]*models.GamePrompt, error) {
 }
 
 func GetGameIDByGamePromptID(gamePromptID uint) (uint, error) {
-	var gamePrompt models.GamePrompt
+	var gamePrompt domain.GamePrompt
 	if err := config.DB.Where("id = ?", gamePromptID).First(&gamePrompt).Error; err != nil {
 		return 0, err
 	}
 	return gamePrompt.GameID, nil
 }
 
-func CreateGamePrompt(gamePrompt *models.GamePrompt) error {
+func CreateGamePrompt(gamePrompt *domain.GamePrompt) error {
 	return config.DB.Create(gamePrompt).Error
 }
