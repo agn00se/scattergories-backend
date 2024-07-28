@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"scattergories-backend/internal/api/handlers"
-	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -88,7 +87,7 @@ func (h *Hub) Run() {
 // Each call to HandleWebSocket handles a new client connection, allowing multiple clients to connect to the server simultaneously.
 // Each client gets its own instance of a Client struct, which is then managed by the hub. This allows multiple clients to
 // communicate with the server and each other through the WebSocket connection.
-func HandleWebSocket(c *gin.Context) {
+func HandleWebSocket(c *gin.Context, handler MessageHandler) {
 	userID, exists := c.Get("userID")
 	if !exists {
 		handlers.HandleError(c, http.StatusUnauthorized, "Unauthorized")
@@ -102,7 +101,7 @@ func HandleWebSocket(c *gin.Context) {
 	}
 
 	// Check if the room exists in the database
-	_, err = services.GetGameRoomByID(roomID)
+	_, err = handler.GetGameRoomByID(roomID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			handlers.HandleError(c, http.StatusNotFound, "Room not found")
@@ -119,7 +118,7 @@ func HandleWebSocket(c *gin.Context) {
 		return
 	}
 
-	client := &Client{conn: conn, roomID: roomID, userID: userID.(uint), send: make(chan []byte, 256)}
+	client := &Client{conn: conn, roomID: roomID, userID: userID.(uint), send: make(chan []byte, 256), handler: handler}
 	HubInstance.register <- client // send the client to the hub.register channel
 
 	// writePump is typically run in a separate goroutine to allow the readPump to handle incoming messages immediately.

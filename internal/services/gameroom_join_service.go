@@ -6,26 +6,45 @@ import (
 
 var roomCapacity = 6
 
-func JoinGameRoom(userID uint, roomID uint) error {
+type GameRoomJoinService interface {
+	JoinGameRoom(userID uint, roomID uint) error
+	LeaveGameRoom(userID uint, roomID uint) error
+}
+
+type GameRoomJoinServiceImpl struct {
+	gameRoomService GameRoomService
+	userService     UserService
+	gameService     GameService
+}
+
+func NewGameRoomJoinService(gameRoomService GameRoomService, userService UserService, gameService GameService) GameRoomJoinService {
+	return &GameRoomJoinServiceImpl{
+		gameRoomService: gameRoomService,
+		userService:     userService,
+		gameService:     gameService,
+	}
+}
+
+func (s *GameRoomJoinServiceImpl) JoinGameRoom(userID uint, roomID uint) error {
 	// Verify game room exists
-	_, err := GetGameRoomByID(roomID)
+	_, err := s.gameRoomService.GetGameRoomByID(roomID)
 	if err != nil {
 		return err
 	}
 
 	// Verify no game at the Ongoing or Voting stage
-	if err := verifyNoActiveGameInRoom(roomID); err != nil {
+	if err := s.gameService.VerifyNoActiveGameInRoom(roomID); err != nil {
 		return err
 	}
 
 	// Verify user exists
-	user, err := GetUserByID(userID)
+	user, err := s.userService.GetUserByID(userID)
 	if err != nil {
 		return err
 	}
 
 	// Verify game room not full
-	usersInRoom, err := getUsersByGameRoomID(roomID)
+	usersInRoom, err := s.userService.GetUsersByGameRoomID(roomID)
 	if err != nil {
 		return err
 	}
@@ -35,18 +54,18 @@ func JoinGameRoom(userID uint, roomID uint) error {
 
 	// Update the associated game room in the user table
 	user.GameRoomID = &roomID
-	return updateUser(user)
+	return s.userService.UpdateUser(user)
 }
 
-func LeaveGameRoom(userID uint, roomID uint) error {
+func (s *GameRoomJoinServiceImpl) LeaveGameRoom(userID uint, roomID uint) error {
 	// Verify game room exists
-	gameRoom, err := GetGameRoomByID(roomID)
+	gameRoom, err := s.gameRoomService.GetGameRoomByID(roomID)
 	if err != nil {
 		return err
 	}
 
 	// Verify user exists
-	user, err := GetUserByID(userID)
+	user, err := s.userService.GetUserByID(userID)
 	if err != nil {
 		return err
 	}
@@ -59,19 +78,19 @@ func LeaveGameRoom(userID uint, roomID uint) error {
 	}
 
 	// Update user record
-	if err := updateUser(user); err != nil {
+	if err := s.userService.UpdateUser(user); err != nil {
 		return err
 	}
 
 	// Check if there are any users left in the game room
-	usersInRoom, err := getUsersByGameRoomID(roomID)
+	usersInRoom, err := s.userService.GetUsersByGameRoomID(roomID)
 	if err != nil {
 		return err
 	}
 
 	// If no users left, delete the game room
 	if len(usersInRoom) == 0 {
-		if err := DeleteGameRoomByID(roomID); err != nil {
+		if err := s.gameRoomService.DeleteGameRoomByID(roomID); err != nil {
 			return err
 		}
 		return nil
@@ -79,7 +98,7 @@ func LeaveGameRoom(userID uint, roomID uint) error {
 
 	// Check if the user is the host and assign a new host if needed
 	if gameRoom.HostID == userID {
-		if _, err := updateHost(roomID, usersInRoom[0].ID); err != nil {
+		if _, err := s.gameRoomService.UpdateHost(roomID, usersInRoom[0].ID); err != nil {
 			return err
 		}
 	}

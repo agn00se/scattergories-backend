@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"scattergories-backend/internal/api/websocket/responses"
-	"scattergories-backend/internal/services"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -15,10 +14,11 @@ import (
 // roomID - The ID of the room the client is connected to.
 // send - A channel for sending messages to the client.
 type Client struct {
-	conn   *websocket.Conn
-	roomID uint
-	userID uint
-	send   chan []byte
+	conn    *websocket.Conn
+	roomID  uint
+	userID  uint
+	send    chan []byte
+	handler MessageHandler
 }
 
 const (
@@ -62,7 +62,7 @@ func (c *Client) readPump() {
 			continue
 		}
 
-		HandleMessage(c, c.roomID, messageType, message)
+		c.handler.HandleMessage(c, c.roomID, messageType, message)
 
 		HubInstance.broadcast <- Message{RoomID: c.roomID, Content: message}
 	}
@@ -111,7 +111,7 @@ func (c *Client) startCountdown(duration time.Duration, roomID uint) {
 }
 
 func (c *Client) triggerWorkflow(roomID uint) {
-	game, answers, err := services.LoadDataForRoom(roomID)
+	game, answers, err := c.handler.LoadDataForRoom(roomID)
 	if err != nil {
 		sendError(c, "Error loading data")
 		return

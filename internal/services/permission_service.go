@@ -1,6 +1,8 @@
 package services
 
-import "scattergories-backend/internal/common"
+import (
+	"scattergories-backend/internal/common"
+)
 
 type PermissionType string
 
@@ -10,27 +12,43 @@ const (
 	UserWritePermission     PermissionType = "user:write"
 )
 
-func HasPermission(userID uint, permissionType PermissionType, resourceID uint) (bool, error) {
+type PermissionService interface {
+	HasPermission(userID uint, permissionType PermissionType, resourceID uint) (bool, error)
+}
+
+type PermissionServiceImpl struct {
+	UserService     UserService
+	GameRoomService GameRoomService
+}
+
+func NewPermissionService(userService UserService, gameRoomService GameRoomService) PermissionService {
+	return &PermissionServiceImpl{
+		UserService:     userService,
+		GameRoomService: gameRoomService,
+	}
+}
+
+func (s *PermissionServiceImpl) HasPermission(userID uint, permissionType PermissionType, resourceID uint) (bool, error) {
 	switch permissionType {
 	case GameRoomReadPermission:
-		return hasGameRoomReadPermission(userID, resourceID)
+		return s.hasGameRoomReadPermission(userID, resourceID)
 	case GameRoomWritePermission:
-		return hasGameRoomWritePermission(userID, resourceID)
+		return s.hasGameRoomWritePermission(userID, resourceID)
 	case UserWritePermission:
-		return hasUserWritePermission(userID, resourceID)
+		return s.hasUserWritePermission(userID, resourceID)
 	}
 	return false, nil
 }
 
 // GetGameRoom
-func hasGameRoomReadPermission(userID uint, resourceID uint) (bool, error) {
+func (s *PermissionServiceImpl) hasGameRoomReadPermission(userID uint, resourceID uint) (bool, error) {
 	// Verify game room exists
-	if _, err := GetGameRoomByID(resourceID); err != nil {
+	if _, err := s.GameRoomService.GetGameRoomByID(resourceID); err != nil {
 		return false, err
 	}
 
 	// Verify user exists
-	user, err := GetUserByID(userID)
+	user, err := s.UserService.GetUserByID(userID)
 	if err != nil {
 		return false, err
 	}
@@ -43,15 +61,15 @@ func hasGameRoomReadPermission(userID uint, resourceID uint) (bool, error) {
 }
 
 // DeleteGameRoom, StartGame, EndGame, UpdateGameConfig
-func hasGameRoomWritePermission(userID uint, resourceID uint) (bool, error) {
+func (s *PermissionServiceImpl) hasGameRoomWritePermission(userID uint, resourceID uint) (bool, error) {
 	// Verify user exists
-	_, err := GetUserByID(userID)
+	_, err := s.UserService.GetUserByID(userID)
 	if err != nil {
 		return false, err
 	}
 
 	// Verify user is the game room host
-	room, err := GetGameRoomByID(resourceID)
+	room, err := s.GameRoomService.GetGameRoomByID(resourceID)
 	if err != nil {
 		return false, err
 	}
@@ -62,7 +80,7 @@ func hasGameRoomWritePermission(userID uint, resourceID uint) (bool, error) {
 }
 
 // UpdateUser, DeleteUser
-func hasUserWritePermission(userID uint, resourceID uint) (bool, error) {
+func (s *PermissionServiceImpl) hasUserWritePermission(userID uint, resourceID uint) (bool, error) {
 	// Verify user is the user being deleted
 	if userID != resourceID {
 		return false, common.ErrDeleteUserNotSelf

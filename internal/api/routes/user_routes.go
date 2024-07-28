@@ -3,26 +3,27 @@ package routes
 import (
 	"scattergories-backend/internal/api/handlers"
 	"scattergories-backend/internal/api/middlewares"
+	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterUserRoutes(router *gin.Engine) {
+func RegisterUserRoutes(router *gin.Engine, authHandler handlers.AuthHandler, userHandler handlers.UserHandler, tokenService services.TokenService) {
 	userRoutes := router.Group("/users")
 	{
-		userRoutes.POST("", handlers.CreateAccount) // Public route
+		userRoutes.POST("", userHandler.CreateAccount) // Public route
 
-		userRoutes.Use(middlewares.JWTAuthMiddleware())
+		userRoutes.Use(middlewares.JWTAuthMiddleware(tokenService))
 		{
-			userRoutes.GET("", handlers.GetAllUsers)
-			userRoutes.GET("/:id", handlers.GetUser)
+			userRoutes.GET("", userHandler.GetAllUsers)
+			userRoutes.GET("/:id", userHandler.GetUser)
 			// userRoutes.PUT("/:id", controllers.UpdateUser)
-			userRoutes.DELETE("/:id", handlers.DeleteAccount)
+			userRoutes.DELETE("/:id", userHandler.DeleteAccount)
 		}
 	}
 
-	router.POST("/guests", handlers.CreateGuestAccount) // Public route
-	router.POST("/login", handlers.Login)               // Public route
-	router.POST("/logout", middlewares.JWTAuthMiddleware(), handlers.Logout)
-	router.POST("/refresh-token", handlers.ExchangeToken) // Public route
+	router.POST("/guests", userHandler.CreateGuestAccount) // Public route
+	router.POST("/login", authHandler.Login)               // Public route
+	router.POST("/logout", middlewares.JWTAuthMiddleware(tokenService), authHandler.Logout)
+	router.POST("/refresh-token", authHandler.ExchangeToken) // Public route
 }

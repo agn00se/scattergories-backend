@@ -10,8 +10,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GetAllGameRooms(c *gin.Context) {
-	rooms, err := services.GetAllGameRooms()
+type GameRoomHandler interface {
+	GetAllGameRooms(c *gin.Context)
+	GetGameRoom(c *gin.Context)
+	CreateGameRoom(c *gin.Context)
+	DeleteGameRoom(c *gin.Context)
+}
+
+type GameRoomHandlerImpl struct {
+	gameRoomService   services.GameRoomService
+	permissionService services.PermissionService
+}
+
+func NewGameRoomHandler(gameRoomService services.GameRoomService, permissionService services.PermissionService) GameRoomHandler {
+	return &GameRoomHandlerImpl{gameRoomService: gameRoomService, permissionService: permissionService}
+}
+
+func (h *GameRoomHandlerImpl) GetAllGameRooms(c *gin.Context) {
+	rooms, err := h.gameRoomService.GetAllGameRooms()
 	if err != nil {
 		HandleError(c, http.StatusInternalServerError, "Failed to retrieve game rooms")
 		return
@@ -25,7 +41,7 @@ func GetAllGameRooms(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func GetGameRoom(c *gin.Context) {
+func (h *GameRoomHandlerImpl) GetGameRoom(c *gin.Context) {
 	roomID, err := GetIDParam(c, "room_id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
@@ -33,13 +49,13 @@ func GetGameRoom(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	permitted, err := services.HasPermission(userID.(uint), services.GameRoomReadPermission, roomID)
+	permitted, err := h.permissionService.HasPermission(userID.(uint), services.GameRoomReadPermission, roomID)
 	if err != nil || !permitted {
 		HandleError(c, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	room, err := services.GetGameRoomByID(roomID)
+	room, err := h.gameRoomService.GetGameRoomByID(roomID)
 	if err != nil {
 		if err == common.ErrGameRoomNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
@@ -53,14 +69,16 @@ func GetGameRoom(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func CreateGameRoom(c *gin.Context) {
+func (h *GameRoomHandlerImpl) CreateGameRoom(c *gin.Context) {
 	var request requests.GameRoomRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		HandleError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	gameRoom, err := services.CreateGameRoom(request.HostID, request.IsPrivate, request.Passcode)
+	hostID := c.MustGet("userID").(uint)
+
+	gameRoom, err := h.gameRoomService.CreateGameRoom(hostID, request.IsPrivate, request.Passcode)
 	if err != nil {
 		if err == common.ErrUserNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
@@ -76,7 +94,7 @@ func CreateGameRoom(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func DeleteGameRoom(c *gin.Context) {
+func (h *GameRoomHandlerImpl) DeleteGameRoom(c *gin.Context) {
 	id, err := GetIDParam(c, "room_id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
@@ -84,13 +102,13 @@ func DeleteGameRoom(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	permitted, err := services.HasPermission(userID.(uint), services.GameRoomWritePermission, id)
+	permitted, err := h.permissionService.HasPermission(userID.(uint), services.GameRoomWritePermission, id)
 	if err != nil || !permitted {
 		HandleError(c, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	err = services.DeleteGameRoomByID(id)
+	err = h.gameRoomService.DeleteGameRoomByID(id)
 	if err != nil {
 		if err == common.ErrGameRoomNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())

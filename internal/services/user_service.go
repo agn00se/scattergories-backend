@@ -11,58 +11,61 @@ import (
 
 const uniqueViolationCode = "23505"
 
-func GetAllUsers() ([]*domain.User, error) {
-	return repositories.GetAllUsers()
+type UserService interface {
+	GetAllUsers() ([]*domain.User, error)
+	GetUserByID(id uint) (*domain.User, error)
+	CreateGuestUser() (*domain.User, error)
+	DeleteUserByID(id uint) error
+	GetUserByEmail(email string) (*domain.User, error)
+	GetUsersByGameRoomID(roomID uint) ([]*domain.User, error)
+	CreateUser(user *domain.User) (*domain.User, error)
+	UpdateUser(user *domain.User) error
 }
 
-func GetUserByID(id uint) (*domain.User, error) {
-	return repositories.GetUserByID(id)
+type UserServiceImpl struct {
+	userRepository repositories.UserRepository
 }
 
-func CreateGuestUser() (*domain.User, error) {
+func NewUserService(userRepository repositories.UserRepository) UserService {
+	return &UserServiceImpl{userRepository: userRepository}
+}
+
+func (s *UserServiceImpl) GetAllUsers() ([]*domain.User, error) {
+	return s.userRepository.GetAllUsers()
+}
+
+func (s *UserServiceImpl) GetUserByID(id uint) (*domain.User, error) {
+	return s.userRepository.GetUserByID(id)
+}
+
+func (s *UserServiceImpl) CreateGuestUser() (*domain.User, error) {
 	guestName := utils.GenerateGuestName()
 
 	user := &domain.User{
 		Type: domain.UserTypeGuest,
 		Name: guestName,
 	}
-	return createUser(user)
+	return s.CreateUser(user)
 }
 
-func CreateRegisteredUser(name string, email string, password string) (*domain.User, error) {
-	hash, salt, err := generateHash(password)
-	if err != nil {
-		return nil, err
-	}
-
-	user := &domain.User{
-		Type:         domain.UserTypeRegistered,
-		Name:         name,
-		Email:        &email,
-		PasswordHash: &hash,
-		Salt:         &salt,
-	}
-	return createUser(user)
-}
-
-func DeleteUserByID(id uint) error {
-	result := repositories.DeleteUserByID(id)
+func (s *UserServiceImpl) DeleteUserByID(id uint) error {
+	result := s.userRepository.DeleteUserByID(id)
 	if result.Error != nil {
 		return result.Error
 	}
 	return nil
 }
 
-func getUserByEmail(email string) (*domain.User, error) {
-	return repositories.GetUserByEmail(email)
+func (s *UserServiceImpl) GetUserByEmail(email string) (*domain.User, error) {
+	return s.userRepository.GetUserByEmail(email)
 }
 
-func getUsersByGameRoomID(roomID uint) ([]*domain.User, error) {
-	return repositories.GetUsersByGameRoomID(roomID)
+func (s *UserServiceImpl) GetUsersByGameRoomID(roomID uint) ([]*domain.User, error) {
+	return s.userRepository.GetUsersByGameRoomID(roomID)
 }
 
-func createUser(user *domain.User) (*domain.User, error) {
-	if err := repositories.CreateUser(user); err != nil {
+func (s *UserServiceImpl) CreateUser(user *domain.User) (*domain.User, error) {
+	if err := s.userRepository.CreateUser(user); err != nil {
 		// Return error if the email is already used
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == uniqueViolationCode {
 			return nil, common.ErrEmailAlreadyUsed
@@ -72,6 +75,6 @@ func createUser(user *domain.User) (*domain.User, error) {
 	return user, nil
 }
 
-func updateUser(user *domain.User) error {
-	return repositories.UpdateUser(user)
+func (s *UserServiceImpl) UpdateUser(user *domain.User) error {
+	return s.userRepository.UpdateUser(user)
 }

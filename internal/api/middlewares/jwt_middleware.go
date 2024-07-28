@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func JWTAuthMiddleware() gin.HandlerFunc {
+func JWTAuthMiddleware(tokenService services.TokenService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract the token from the Authorization header
 		authHeader := c.GetHeader("Authorization")
@@ -22,7 +22,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
 		// Check if the token is blacklisted
-		blacklisted, err := services.IsTokenBlacklisted(tokenString)
+		blacklisted, err := tokenService.IsTokenBlacklisted(tokenString)
 		if err != nil {
 			handlers.HandleError(c, http.StatusInternalServerError, err.Error())
 			c.Abort()
@@ -35,7 +35,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		}
 
 		// Check if the token is valid
-		claims, err := services.ValidateToken(tokenString)
+		claims, err := tokenService.ValidateToken(tokenString)
 		if err != nil {
 			handlers.HandleError(c, http.StatusUnauthorized, err.Error())
 			c.Abort()

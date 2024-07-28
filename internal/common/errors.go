@@ -11,7 +11,7 @@ var (
 	ErrGameNotFound                   = errors.New("game not found")
 	ErrGamePromptNotFound             = errors.New("game prompt not found")
 	ErrGameRoomFull                   = errors.New("game room is full")
-	ErrGameRoomNotHost                = errors.New("you are the host of the game room")
+	ErrGameRoomNotHost                = errors.New("you are not the host of the game room")
 	ErrGameRoomNotFound               = errors.New("game room not found")
 	ErrGameRoomConfigNotFound         = errors.New("game room config not found")
 	ErrGameRoomWithGivenHostNotFound  = errors.New("game room with the specied host not found")

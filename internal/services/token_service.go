@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"os"
-	"scattergories-backend/config"
 	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/domain"
 	"time"
@@ -17,7 +16,26 @@ var (
 	ctx       = context.Background()
 )
 
-func ValidateToken(tokenString string) (jwt.MapClaims, error) {
+type TokenService interface {
+	ValidateToken(tokenString string) (jwt.MapClaims, error)
+	InvalidateToken(tokenString string) error
+	IsTokenBlacklisted(tokenString string) (bool, error)
+	RefreshTokens(refreshToken string) (string, string, error)
+	GenerateJWT(userID uint, userType domain.UserType) (string, error)
+	GenerateRefreshToken(userID uint) (string, error)
+}
+
+type TokenServiceImpl struct {
+	redisClient *redis.Client
+}
+
+func NewTokenService(redisClient *redis.Client) TokenService {
+	return &TokenServiceImpl{
+		redisClient: redisClient,
+	}
+}
+
+func (s *TokenServiceImpl) ValidateToken(tokenString string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecret, nil
 	})
@@ -34,16 +52,16 @@ func ValidateToken(tokenString string) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
-func InvalidateToken(tokenString string) error {
-	err := config.RedisClient.Set(ctx, "blacklist:"+tokenString, "true", 24*time.Hour).Err()
+func (s *TokenServiceImpl) InvalidateToken(tokenString string) error {
+	err := s.redisClient.Set(ctx, "blacklist:"+tokenString, "true", 24*time.Hour).Err()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func IsTokenBlacklisted(tokenString string) (bool, error) {
-	val, err := config.RedisClient.Get(ctx, "blacklist:"+tokenString).Result()
+func (s *TokenServiceImpl) IsTokenBlacklisted(tokenString string) (bool, error) {
+	val, err := s.redisClient.Get(ctx, "blacklist:"+tokenString).Result()
 	if err == redis.Nil {
 		return false, nil
 	}
@@ -53,9 +71,9 @@ func IsTokenBlacklisted(tokenString string) (bool, error) {
 	return val == "true", nil
 }
 
-func RefreshTokens(refreshToken string) (string, string, error) {
+func (s *TokenServiceImpl) RefreshTokens(refreshToken string) (string, string, error) {
 	// Check if the refresh token is valid
-	claims, err := ValidateToken(refreshToken)
+	claims, err := s.ValidateToken(refreshToken)
 	if err != nil {
 		return "", "", err
 	}
@@ -63,7 +81,7 @@ func RefreshTokens(refreshToken string) (string, string, error) {
 	userID := uint(claims["user_id"].(float64))
 
 	// Check if the refresh token is still valid in Redis
-	if _, err := config.RedisClient.Get(ctx, "refresh_token:"+refreshToken).Result(); err != nil {
+	if _, err := s.redisClient.Get(ctx, "refresh_token:"+refreshToken).Result(); err != nil {
 		if err == redis.Nil {
 			return "", "", common.ErrInvalidToken
 		}
@@ -71,19 +89,19 @@ func RefreshTokens(refreshToken string) (string, string, error) {
 	}
 
 	// Invalidate the old refresh token
-	if err := config.RedisClient.Del(ctx, "refresh_token:"+refreshToken).Err(); err != nil {
+	if err := s.redisClient.Del(ctx, "refresh_token:"+refreshToken).Err(); err != nil {
 		return "", "", err
 	}
 
 	// Generate new access token
 	userType := domain.UserType(claims["user_type"].(string))
-	newAccessToken, err := GenerateJWT(userID, userType)
+	newAccessToken, err := s.GenerateJWT(userID, userType)
 	if err != nil {
 		return "", "", err
 	}
 
 	// Generate new refresh token
-	newRefreshToken, err := generateRefreshToken(userID)
+	newRefreshToken, err := s.GenerateRefreshToken(userID)
 	if err != nil {
 		return "", "", err
 	}
@@ -91,7 +109,7 @@ func RefreshTokens(refreshToken string) (string, string, error) {
 	return newAccessToken, newRefreshToken, nil
 }
 
-func GenerateJWT(userID uint, userType domain.UserType) (string, error) {
+func (s *TokenServiceImpl) GenerateJWT(userID uint, userType domain.UserType) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id":   userID,
 		"user_type": string(userType),
@@ -102,7 +120,7 @@ func GenerateJWT(userID uint, userType domain.UserType) (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
-func generateRefreshToken(userID uint) (string, error) {
+func (s *TokenServiceImpl) GenerateRefreshToken(userID uint) (string, error) {
 	duration := time.Hour * 24 * 7
 
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -115,7 +133,7 @@ func generateRefreshToken(userID uint) (string, error) {
 		return "", err
 	}
 
-	err = config.RedisClient.Set(ctx, "refresh_token:"+tokenString, userID, duration).Err()
+	err = s.redisClient.Set(ctx, "refresh_token:"+tokenString, userID, duration).Err()
 	if err != nil {
 		return "", err
 	}

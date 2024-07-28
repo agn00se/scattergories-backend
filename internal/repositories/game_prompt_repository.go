@@ -1,26 +1,41 @@
 package repositories
 
 import (
-	"scattergories-backend/config"
 	"scattergories-backend/internal/domain"
+
+	"gorm.io/gorm"
 )
 
-func GetGamePromptsByGameID(gameID uint) ([]*domain.GamePrompt, error) {
+type GamePromptRepository interface {
+	GetGamePromptsByGameID(gameID uint) ([]*domain.GamePrompt, error)
+	GetGameIDByGamePromptID(gamePromptID uint) (uint, error)
+	CreateGamePrompt(gamePrompt *domain.GamePrompt) error
+}
+
+type GamePromptRepositoryImpl struct {
+	db *gorm.DB
+}
+
+func NewGamePromptRepository(db *gorm.DB) GamePromptRepository {
+	return &GamePromptRepositoryImpl{db: db}
+}
+
+func (r *GamePromptRepositoryImpl) GetGamePromptsByGameID(gameID uint) ([]*domain.GamePrompt, error) {
 	var gamePrompts []*domain.GamePrompt
-	if err := config.DB.Where("game_id = ?", gameID).Preload("Prompt").Find(&gamePrompts).Error; err != nil {
+	if err := r.db.Where("game_id = ?", gameID).Preload("Prompt").Find(&gamePrompts).Error; err != nil {
 		return nil, err
 	}
 	return gamePrompts, nil
 }
 
-func GetGameIDByGamePromptID(gamePromptID uint) (uint, error) {
+func (r *GamePromptRepositoryImpl) GetGameIDByGamePromptID(gamePromptID uint) (uint, error) {
 	var gamePrompt domain.GamePrompt
-	if err := config.DB.Where("id = ?", gamePromptID).First(&gamePrompt).Error; err != nil {
+	if err := r.db.Where("id = ?", gamePromptID).First(&gamePrompt).Error; err != nil {
 		return 0, err
 	}
 	return gamePrompt.GameID, nil
 }
 
-func CreateGamePrompt(gamePrompt *domain.GamePrompt) error {
-	return config.DB.Create(gamePrompt).Error
+func (r *GamePromptRepositoryImpl) CreateGamePrompt(gamePrompt *domain.GamePrompt) error {
+	return r.db.Create(gamePrompt).Error
 }

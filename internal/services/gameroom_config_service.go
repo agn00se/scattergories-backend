@@ -12,9 +12,23 @@ var (
 	defaultNumberOfPrompts = 10
 )
 
-func UpdateGameConfig(request *domain.GameRoomConfig) (*domain.GameRoomConfig, error) {
+type GameConfigService interface {
+	UpdateGameConfig(request *domain.GameRoomConfig) (*domain.GameRoomConfig, error)
+	GetGameRoomConfigByRoomID(roomID uint) (*domain.GameRoomConfig, error)
+	CreateDefaultGameRoomConfig(gameRoomID uint) error
+}
+
+type GameConfigServiceImpl struct {
+	gameRoomConfigRepository repositories.GameRoomConfigRepository
+}
+
+func NewGameConfigService(gameRoomConfigRepository repositories.GameRoomConfigRepository) GameConfigService {
+	return &GameConfigServiceImpl{gameRoomConfigRepository: gameRoomConfigRepository}
+}
+
+func (s *GameConfigServiceImpl) UpdateGameConfig(request *domain.GameRoomConfig) (*domain.GameRoomConfig, error) {
 	// Fetch game room config
-	gameRoomConfig, err := getGameRoomConfigByRoomID(request.GameRoomID)
+	gameRoomConfig, err := s.GetGameRoomConfigByRoomID(request.GameRoomID)
 	if err != nil {
 		return nil, err
 	}
@@ -24,18 +38,18 @@ func UpdateGameConfig(request *domain.GameRoomConfig) (*domain.GameRoomConfig, e
 	gameRoomConfig.NumberOfPrompts = request.NumberOfPrompts
 	gameRoomConfig.Letter = strings.ToUpper(request.Letter)
 
-	if err := repositories.UpdateGameRoomConfig(gameRoomConfig); err != nil {
+	if err := s.gameRoomConfigRepository.UpdateGameRoomConfig(gameRoomConfig); err != nil {
 		return nil, err
 	}
 
 	return gameRoomConfig, nil
 }
 
-func getGameRoomConfigByRoomID(roomID uint) (*domain.GameRoomConfig, error) {
-	return repositories.GetGameRoomConfigByRoomID(roomID)
+func (s *GameConfigServiceImpl) GetGameRoomConfigByRoomID(roomID uint) (*domain.GameRoomConfig, error) {
+	return s.gameRoomConfigRepository.GetGameRoomConfigByRoomID(roomID)
 }
 
-func createDefaultGameRoomConfig(gameRoomID uint) error {
+func (s *GameConfigServiceImpl) CreateDefaultGameRoomConfig(gameRoomID uint) error {
 	gameRoomConfig := &domain.GameRoomConfig{
 		GameRoomID:      gameRoomID,
 		TimeLimit:       defaultTimeLimit,
@@ -43,7 +57,7 @@ func createDefaultGameRoomConfig(gameRoomID uint) error {
 		Letter:          utils.GetRandomLetter(),
 	}
 
-	if err := repositories.CreateGameRoomConfig(gameRoomConfig); err != nil {
+	if err := s.gameRoomConfigRepository.CreateGameRoomConfig(gameRoomConfig); err != nil {
 		return err
 	}
 	return nil

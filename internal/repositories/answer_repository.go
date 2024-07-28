@@ -1,32 +1,48 @@
 package repositories
 
 import (
-	"scattergories-backend/config"
 	"scattergories-backend/internal/domain"
+
+	"gorm.io/gorm"
 )
 
-func GetAnswersByGameID(gameID uint) ([]*domain.Answer, error) {
+type AnswerRepository interface {
+	GetAnswersByGameID(gameID uint) ([]*domain.Answer, error)
+	GetAnswerByPlayerAndPrompt(playerID uint, gamePromptID uint) (*domain.Answer, error)
+	SaveAnswer(answer *domain.Answer) error
+	CreateAnswer(answer *domain.Answer) error
+}
+
+type AnswerRepositoryImpl struct {
+	db *gorm.DB
+}
+
+func NewAnswerRepository(db *gorm.DB) AnswerRepository {
+	return &AnswerRepositoryImpl{db: db}
+}
+
+func (r *AnswerRepositoryImpl) GetAnswersByGameID(gameID uint) ([]*domain.Answer, error) {
 	var answers []*domain.Answer
-	if err := config.DB.Preload("Player.User").Preload("GamePrompt.Prompt").Where("game_prompt_id IN (?)",
-		config.DB.Table("game_prompts").Select("id").Where("game_id = ?", gameID)).Find(&answers).Error; err != nil {
+	if err := r.db.Preload("Player.User").Preload("GamePrompt.Prompt").Where("game_prompt_id IN (?)",
+		r.db.Table("game_prompts").Select("id").Where("game_id = ?", gameID)).Find(&answers).Error; err != nil {
 		return nil, err
 	}
 	return answers, nil
 }
 
-func GetAnswerByPlayerAndPrompt(playerID uint, gamePromptID uint) (*domain.Answer, error) {
+func (r *AnswerRepositoryImpl) GetAnswerByPlayerAndPrompt(playerID uint, gamePromptID uint) (*domain.Answer, error) {
 	var answer domain.Answer
-	err := config.DB.Where("player_id = ? AND game_prompt_id = ?", playerID, gamePromptID).First(&answer).Error
+	err := r.db.Where("player_id = ? AND game_prompt_id = ?", playerID, gamePromptID).First(&answer).Error
 	if err != nil {
 		return nil, err
 	}
 	return &answer, nil
 }
 
-func SaveAnswer(answer *domain.Answer) error {
-	return config.DB.Save(answer).Error
+func (r *AnswerRepositoryImpl) SaveAnswer(answer *domain.Answer) error {
+	return r.db.Save(answer).Error
 }
 
-func CreateAnswer(answer *domain.Answer) error {
-	return config.DB.Create(answer).Error
+func (r *AnswerRepositoryImpl) CreateAnswer(answer *domain.Answer) error {
+	return r.db.Create(answer).Error
 }

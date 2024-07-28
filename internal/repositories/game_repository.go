@@ -1,16 +1,30 @@
 package repositories
 
 import (
-	"scattergories-backend/config"
 	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/domain"
 
 	"gorm.io/gorm"
 )
 
-func GetGameByID(id uint) (*domain.Game, error) {
+type GameRepository interface {
+	GetGameByID(id uint) (*domain.Game, error)
+	GetGameByRoomIDAndStatus(roomID uint, statuses ...string) (*domain.Game, error)
+	CreateGame(game *domain.Game) error
+	UpdateGame(game *domain.Game) error
+}
+
+type GameRepositoryImpl struct {
+	db *gorm.DB
+}
+
+func NewGameRepository(db *gorm.DB) GameRepository {
+	return &GameRepositoryImpl{db: db}
+}
+
+func (r *GameRepositoryImpl) GetGameByID(id uint) (*domain.Game, error) {
 	var game domain.Game
-	if err := config.DB.First(&game, id).Error; err != nil {
+	if err := r.db.First(&game, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, common.ErrGameNotFound
 		}
@@ -19,20 +33,20 @@ func GetGameByID(id uint) (*domain.Game, error) {
 	return &game, nil
 }
 
-func GetGameByRoomIDAndStatus(roomID uint, statuses ...string) (*domain.Game, error) {
+func (r *GameRepositoryImpl) GetGameByRoomIDAndStatus(roomID uint, statuses ...string) (*domain.Game, error) {
 	var game domain.Game
-	err := config.DB.Where("game_room_id = ? AND status IN ?", roomID, statuses).First(&game).Error
+	err := r.db.Where("game_room_id = ? AND status IN ?", roomID, statuses).First(&game).Error
 	if err != nil {
 		return nil, err
 	}
 	return &game, nil
 }
 
-func CreateGame(game *domain.Game) error {
-	return config.DB.Create(game).Error
+func (r *GameRepositoryImpl) CreateGame(game *domain.Game) error {
+	return r.db.Create(game).Error
 
 }
 
-func UpdateGame(game *domain.Game) error {
-	return config.DB.Save(game).Error
+func (r *GameRepositoryImpl) UpdateGame(game *domain.Game) error {
+	return r.db.Save(game).Error
 }

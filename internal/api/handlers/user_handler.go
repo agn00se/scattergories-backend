@@ -12,8 +12,36 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GetAllUsers(c *gin.Context) {
-	users, err := services.GetAllUsers()
+type UserHandler interface {
+	GetAllUsers(c *gin.Context)
+	GetUser(c *gin.Context)
+	CreateAccount(c *gin.Context)
+	CreateGuestAccount(c *gin.Context)
+	DeleteAccount(c *gin.Context)
+}
+
+type UserHandlerImpl struct {
+	userService             services.UserService
+	userRegistrationService services.UserRegistrationService
+	tokenService            services.TokenService
+	permissionService       services.PermissionService
+}
+
+func NewUserHandler(
+	userService services.UserService,
+	userRegistrationService services.UserRegistrationService,
+	tokenService services.TokenService,
+	permissionService services.PermissionService) UserHandler {
+	return &UserHandlerImpl{
+		userService:             userService,
+		userRegistrationService: userRegistrationService,
+		tokenService:            tokenService,
+		permissionService:       permissionService,
+	}
+}
+
+func (h *UserHandlerImpl) GetAllUsers(c *gin.Context) {
+	users, err := h.userService.GetAllUsers()
 	if err != nil {
 		HandleError(c, http.StatusInternalServerError, "Failed to retrieve users")
 	}
@@ -27,14 +55,14 @@ func GetAllUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func GetUser(c *gin.Context) {
+func (h *UserHandlerImpl) GetUser(c *gin.Context) {
 	id, err := GetIDParam(c, "id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
-	user, err := services.GetUserByID(id)
+	user, err := h.userService.GetUserByID(id)
 	if err != nil {
 		if err == common.ErrUserNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
@@ -48,14 +76,14 @@ func GetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func CreateAccount(c *gin.Context) {
+func (h *UserHandlerImpl) CreateAccount(c *gin.Context) {
 	var request requests.UserRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		HandleError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	user, err := services.CreateRegisteredUser(request.Name, request.Email, request.Password)
+	user, err := h.userRegistrationService.CreateRegisteredUser(request.Name, request.Email, request.Password)
 	if err != nil {
 		if err == common.ErrEmailAlreadyUsed {
 			HandleError(c, http.StatusConflict, err.Error())
@@ -69,14 +97,14 @@ func CreateAccount(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func CreateGuestAccount(c *gin.Context) {
-	user, err := services.CreateGuestUser()
+func (h *UserHandlerImpl) CreateGuestAccount(c *gin.Context) {
+	user, err := h.userService.CreateGuestUser()
 	if err != nil {
 		HandleError(c, http.StatusInternalServerError, err.Error())
 	}
 
 	// Generate access token for guest users during account creation
-	accessToken, err := services.GenerateJWT(user.ID, user.Type)
+	accessToken, err := h.tokenService.GenerateJWT(user.ID, user.Type)
 	if err != nil {
 		HandleError(c, http.StatusInternalServerError, err.Error())
 	}
@@ -85,7 +113,7 @@ func CreateGuestAccount(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func DeleteAccount(c *gin.Context) {
+func (h *UserHandlerImpl) DeleteAccount(c *gin.Context) {
 	id, err := GetIDParam(c, "id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid user ID")
@@ -93,13 +121,13 @@ func DeleteAccount(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	permitted, err := services.HasPermission(userID.(uint), services.UserWritePermission, id)
+	permitted, err := h.permissionService.HasPermission(userID.(uint), services.UserWritePermission, id)
 	if err != nil || !permitted {
 		HandleError(c, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	err = services.DeleteUserByID(id)
+	err = h.userService.DeleteUserByID(id)
 	if err != nil {
 		if err == common.ErrUserNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
@@ -112,7 +140,7 @@ func DeleteAccount(c *gin.Context) {
 	tokenString := c.GetHeader("Authorization")
 	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
-	if err := services.InvalidateToken(tokenString); err != nil {
+	if err := h.tokenService.InvalidateToken(tokenString); err != nil {
 		HandleError(c, http.StatusInternalServerError, "Failed to invalidate token")
 		return
 	}

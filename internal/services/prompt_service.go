@@ -6,8 +6,20 @@ import (
 	"scattergories-backend/internal/repositories"
 )
 
-func getRandomPromptsGivenLimit(numberOfPrompts int) ([]*domain.Prompt, error) {
-	prompts, err := repositories.GetRandomPromptsGivenLimit(numberOfPrompts)
+type PromptService interface {
+	GetRandomPromptsGivenLimit(numberOfPrompts int) ([]*domain.Prompt, error)
+}
+
+type PromptServiceImpl struct {
+	promptRepository repositories.PromptRepository
+}
+
+func NewPromptService(promptRepository repositories.PromptRepository) PromptService {
+	return &PromptServiceImpl{promptRepository: promptRepository}
+}
+
+func (s *PromptServiceImpl) GetRandomPromptsGivenLimit(numberOfPrompts int) ([]*domain.Prompt, error) {
+	prompts, err := s.promptRepository.GetRandomPromptsGivenLimit(numberOfPrompts)
 	if err != nil {
 		return nil, err
 	}

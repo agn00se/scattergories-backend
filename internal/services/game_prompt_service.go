@@ -8,12 +8,30 @@ import (
 	"gorm.io/gorm"
 )
 
-func getGamePromptsByGameID(gameID uint) ([]*domain.GamePrompt, error) {
-	return repositories.GetGamePromptsByGameID(gameID)
+type GamePromptService interface {
+	getGamePromptsByGameID(gameID uint) ([]*domain.GamePrompt, error)
+	getGameIDByGamePromptID(gamePromptID uint) (uint, error)
+	createGamePrompts(gameID uint, numberOfPrompts int) error
 }
 
-func getGameIDByGamePromptID(gamePromptID uint) (uint, error) {
-	gameID, err := repositories.GetGameIDByGamePromptID(gamePromptID)
+type GamePromptServiceImpl struct {
+	gamePromptRepository repositories.GamePromptRepository
+	promptService        PromptService
+}
+
+func NewGamePromptService(gamePromptRepository repositories.GamePromptRepository, promptService PromptService) GamePromptService {
+	return &GamePromptServiceImpl{
+		gamePromptRepository: gamePromptRepository,
+		promptService:        promptService,
+	}
+}
+
+func (s *GamePromptServiceImpl) getGamePromptsByGameID(gameID uint) ([]*domain.GamePrompt, error) {
+	return s.gamePromptRepository.GetGamePromptsByGameID(gameID)
+}
+
+func (s *GamePromptServiceImpl) getGameIDByGamePromptID(gamePromptID uint) (uint, error) {
+	gameID, err := s.gamePromptRepository.GetGameIDByGamePromptID(gamePromptID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return 0, common.ErrGamePromptNotFound
@@ -23,9 +41,9 @@ func getGameIDByGamePromptID(gamePromptID uint) (uint, error) {
 	return gameID, nil
 }
 
-func createGamePrompts(gameID uint, numberOfPrompts int) error {
+func (s *GamePromptServiceImpl) createGamePrompts(gameID uint, numberOfPrompts int) error {
 	// Randomly select a subset of prompts
-	prompts, err := getRandomPromptsGivenLimit(numberOfPrompts)
+	prompts, err := s.promptService.GetRandomPromptsGivenLimit(numberOfPrompts)
 	if err != nil {
 		return err
 	}
@@ -36,7 +54,7 @@ func createGamePrompts(gameID uint, numberOfPrompts int) error {
 			GameID:   gameID,
 			PromptID: prompt.ID,
 		}
-		repositories.CreateGamePrompt(gamePrompt)
+		s.gamePromptRepository.CreateGamePrompt(gamePrompt)
 	}
 
 	return nil

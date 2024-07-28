@@ -2,27 +2,35 @@ package handlers
 
 import (
 	"net/http"
-	"scattergories-backend/internal/api/handlers/requests"
 	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
 
-func JoinGameRoom(c *gin.Context) {
+type GameRoomJoinHandler interface {
+	JoinGameRoom(c *gin.Context)
+	LeaveGameRoom(c *gin.Context)
+}
+
+type GameRoomJoinHandlerImpl struct {
+	gameRoomJoinService services.GameRoomJoinService
+}
+
+func NewGameRoomJoinHandler(gameRoomJoinService services.GameRoomJoinService) GameRoomJoinHandler {
+	return &GameRoomJoinHandlerImpl{gameRoomJoinService: gameRoomJoinService}
+}
+
+func (h *GameRoomJoinHandlerImpl) JoinGameRoom(c *gin.Context) {
 	roomID, err := GetIDParam(c, "room_id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
 	}
 
-	var request requests.JoinLeaveRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		HandleError(c, http.StatusBadRequest, err.Error())
-		return
-	}
+	userID := c.MustGet("userID").(uint)
 
-	err = services.JoinGameRoom(request.UserID, roomID)
+	err = h.gameRoomJoinService.JoinGameRoom(userID, roomID)
 	if err != nil {
 		if err == common.ErrGameRoomNotFound || err == common.ErrUserNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
@@ -37,20 +45,16 @@ func JoinGameRoom(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User joined game room"})
 }
 
-func LeaveGameRoom(c *gin.Context) {
+func (h *GameRoomJoinHandlerImpl) LeaveGameRoom(c *gin.Context) {
 	roomID, err := GetIDParam(c, "room_id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
 	}
 
-	var request requests.JoinLeaveRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		HandleError(c, http.StatusBadRequest, err.Error())
-		return
-	}
+	userID := c.MustGet("userID").(uint)
 
-	err = services.LeaveGameRoom(request.UserID, roomID)
+	err = h.gameRoomJoinService.LeaveGameRoom(userID, roomID)
 	if err != nil {
 		if err == common.ErrGameRoomNotFound || err == common.ErrUserNotFound || err == common.ErrUserNotInSpecifiedRoom {
 			HandleError(c, http.StatusNotFound, err.Error())

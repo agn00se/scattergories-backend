@@ -24,9 +24,24 @@ var params = ArgonParams{
 	KeyLen:  32,
 }
 
-func Login(email string, password string) (string, string, error) {
+type AuthService interface {
+	Login(email string, password string) (string, string, error)
+	GenerateHash(password string) (string, string, error)
+	ComputeHash(password string, salt []byte) string
+}
+
+type AuthServiceImpl struct {
+	userService  UserService
+	tokenService TokenService
+}
+
+func NewAuthService(userService UserService, tokenService TokenService) AuthService {
+	return &AuthServiceImpl{userService: userService, tokenService: tokenService}
+}
+
+func (s *AuthServiceImpl) Login(email string, password string) (string, string, error) {
 	// Retrieve the user from the database
-	user, err := getUserByEmail(email)
+	user, err := s.userService.GetUserByEmail(email)
 	if err != nil {
 		return "", "", common.ErrLoginFailed
 	}
@@ -39,7 +54,7 @@ func Login(email string, password string) (string, string, error) {
 	}
 
 	// Compute the hash of the provided password using the decoded salt
-	computedHash := computeHash(password, salt)
+	computedHash := s.ComputeHash(password, salt)
 
 	// Compare the computed hash with the stored hash
 	// Use constant-time comparison to prevent timing attacks
@@ -48,13 +63,13 @@ func Login(email string, password string) (string, string, error) {
 	}
 
 	// Generate access token
-	accessToken, err := GenerateJWT(user.ID, user.Type)
+	accessToken, err := s.tokenService.GenerateJWT(user.ID, user.Type)
 	if err != nil {
 		return "", "", err
 	}
 
 	// Generate refresh token
-	refreshToken, err := generateRefreshToken(user.ID)
+	refreshToken, err := s.tokenService.GenerateRefreshToken(user.ID)
 	if err != nil {
 		return "", "", err
 	}
@@ -62,7 +77,7 @@ func Login(email string, password string) (string, string, error) {
 	return accessToken, refreshToken, nil
 }
 
-func generateHash(password string) (string, string, error) {
+func (s *AuthServiceImpl) GenerateHash(password string) (string, string, error) {
 	// Generate salt
 	salt := make([]byte, 16)
 	if _, err := rand.Read(salt); err != nil {
@@ -70,11 +85,11 @@ func generateHash(password string) (string, string, error) {
 	}
 
 	// Hash password with salt
-	hash := computeHash(password, salt)
+	hash := s.ComputeHash(password, salt)
 	return hash, base64.StdEncoding.EncodeToString(salt), nil
 }
 
-func computeHash(password string, salt []byte) string {
+func (s *AuthServiceImpl) ComputeHash(password string, salt []byte) string {
 	// time - The number of iterations the algorithm should run.
 	// memory - The amount of memory used by the algorithm in KiB.
 	// threads - The number of parallel threads used for hashing.

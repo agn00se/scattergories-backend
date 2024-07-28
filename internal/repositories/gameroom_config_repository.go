@@ -1,16 +1,29 @@
 package repositories
 
 import (
-	"scattergories-backend/config"
 	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/domain"
 
 	"gorm.io/gorm"
 )
 
-func GetGameRoomConfigByRoomID(roomID uint) (*domain.GameRoomConfig, error) {
+type GameRoomConfigRepository interface {
+	GetGameRoomConfigByRoomID(roomID uint) (*domain.GameRoomConfig, error)
+	CreateGameRoomConfig(gameRoomConfig *domain.GameRoomConfig) error
+	UpdateGameRoomConfig(gameRoomConfig *domain.GameRoomConfig) error
+}
+
+type GameRoomConfigRepositoryImpl struct {
+	db *gorm.DB
+}
+
+func NewGameRoomConfigRepository(db *gorm.DB) GameRoomConfigRepository {
+	return &GameRoomConfigRepositoryImpl{db: db}
+}
+
+func (r *GameRoomConfigRepositoryImpl) GetGameRoomConfigByRoomID(roomID uint) (*domain.GameRoomConfig, error) {
 	var gameRoomConfig domain.GameRoomConfig
-	if err := config.DB.First(&gameRoomConfig, "game_room_id = ?", roomID).Error; err != nil {
+	if err := r.db.First(&gameRoomConfig, "game_room_id = ?", roomID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, common.ErrGameRoomConfigNotFound
 		}
@@ -19,10 +32,10 @@ func GetGameRoomConfigByRoomID(roomID uint) (*domain.GameRoomConfig, error) {
 	return &gameRoomConfig, nil
 }
 
-func CreateGameRoomConfig(gameRoomConfig *domain.GameRoomConfig) error {
-	return config.DB.Create(gameRoomConfig).Error
+func (r *GameRoomConfigRepositoryImpl) CreateGameRoomConfig(gameRoomConfig *domain.GameRoomConfig) error {
+	return r.db.Create(gameRoomConfig).Error
 }
 
-func UpdateGameRoomConfig(gameRoomConfig *domain.GameRoomConfig) error {
-	return config.DB.Save(&gameRoomConfig).Error
+func (r *GameRoomConfigRepositoryImpl) UpdateGameRoomConfig(gameRoomConfig *domain.GameRoomConfig) error {
+	return r.db.Save(&gameRoomConfig).Error
 }
