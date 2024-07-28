@@ -1,11 +1,14 @@
 package responses
 
-import "scattergories-backend/internal/domain"
+import (
+	"scattergories-backend/internal/domain"
+	"scattergories-backend/pkg/utils"
+)
 
 type GameRoomResponse struct {
-	ID        uint   `json:"id"`
+	ID        string `json:"id"`
 	RoomCode  string `json:"room_code"`
-	HostID    uint   `json:"host_id"`
+	HostID    string `json:"host_id"`
 	HostName  string `json:"host_name"`
 	IsPrivate bool   `json:"is_private"`
 }
@@ -13,9 +16,9 @@ type GameRoomResponse struct {
 // Passcode is excluded from return response for security reasons
 func ToGameRoomResponse(gameRoom *domain.GameRoom) *GameRoomResponse {
 	return &GameRoomResponse{
-		ID:        gameRoom.ID,
+		ID:        utils.UUIDToString(gameRoom.ID),
 		RoomCode:  gameRoom.RoomCode,
-		HostID:    gameRoom.HostID,
+		HostID:    utils.UUIDToString(gameRoom.HostID),
 		HostName:  gameRoom.Host.Name,
 		IsPrivate: gameRoom.IsPrivate,
 	}

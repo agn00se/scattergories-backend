@@ -4,12 +4,13 @@ import (
 	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type AnswerService interface {
-	CreateOrUpdateAnswer(roomID uint, answerText string, userID uint, gamePromptID uint) error
-	GetAnswersByGameID(gameID uint) ([]*domain.Answer, error)
+	CreateOrUpdateAnswer(roomID uuid.UUID, answerText string, userID uuid.UUID, gamePromptID uuid.UUID) error
+	GetAnswersByGameID(gameID uuid.UUID) ([]*domain.Answer, error)
 }
 
 type AnswerServiceImpl struct {
@@ -25,7 +26,7 @@ func NewAnswerService(answerRepository repositories.AnswerRepository, gamePrompt
 		playerService:     playerService}
 }
 
-func (s *AnswerServiceImpl) CreateOrUpdateAnswer(roomID uint, answerText string, userID uint, gamePromptID uint) error {
+func (s *AnswerServiceImpl) CreateOrUpdateAnswer(roomID uuid.UUID, answerText string, userID uuid.UUID, gamePromptID uuid.UUID) error {
 	// Get gameID from gamePromptID
 	gameID, err := s.gamePromptService.getGameIDByGamePromptID(gamePromptID)
 	if err != nil {
@@ -56,6 +57,6 @@ func (s *AnswerServiceImpl) CreateOrUpdateAnswer(roomID uint, answerText string,
 	}
 }
 
-func (s *AnswerServiceImpl) GetAnswersByGameID(gameID uint) ([]*domain.Answer, error) {
+func (s *AnswerServiceImpl) GetAnswersByGameID(gameID uuid.UUID) ([]*domain.Answer, error) {
 	return s.answerRepository.GetAnswersByGameID(gameID)
 }

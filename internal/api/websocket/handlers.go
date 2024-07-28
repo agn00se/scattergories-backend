@@ -6,14 +6,17 @@ import (
 	"scattergories-backend/internal/api/websocket/responses"
 	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/services"
+	"scattergories-backend/pkg/utils"
 	"scattergories-backend/pkg/validators"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type MessageHandler interface {
-	HandleMessage(client *Client, roomID uint, messageType string, message []byte)
-	GetGameRoomByID(roomID uint) (*domain.GameRoom, error)
-	LoadDataForRoom(roomID uint) (*domain.Game, []*domain.Answer, error)
+	HandleMessage(client *Client, roomID uuid.UUID, messageType string, message []byte)
+	GetGameRoomByID(roomID uuid.UUID) (*domain.GameRoom, error)
+	LoadDataForRoom(roomID uuid.UUID) (*domain.Game, []*domain.Answer, error)
 }
 
 type MessageHandlerImpl struct {
@@ -43,7 +46,7 @@ func NewMessageHandler(
 	}
 }
 
-func (h *MessageHandlerImpl) HandleMessage(client *Client, roomID uint, messageType string, message []byte) {
+func (h *MessageHandlerImpl) HandleMessage(client *Client, roomID uuid.UUID, messageType string, message []byte) {
 	switch messageType {
 	case "start_game_request":
 		h.startGame(client, roomID, message)
@@ -58,15 +61,15 @@ func (h *MessageHandlerImpl) HandleMessage(client *Client, roomID uint, messageT
 	}
 }
 
-func (h *MessageHandlerImpl) GetGameRoomByID(roomID uint) (*domain.GameRoom, error) {
+func (h *MessageHandlerImpl) GetGameRoomByID(roomID uuid.UUID) (*domain.GameRoom, error) {
 	return h.gameRoomService.GetGameRoomByID(roomID)
 }
 
-func (h *MessageHandlerImpl) LoadDataForRoom(roomID uint) (*domain.Game, []*domain.Answer, error) {
+func (h *MessageHandlerImpl) LoadDataForRoom(roomID uuid.UUID) (*domain.Game, []*domain.Answer, error) {
 	return h.gameRoomDataService.LoadDataForRoom(roomID)
 }
 
-func (h *MessageHandlerImpl) startGame(client *Client, roomID uint, message []byte) {
+func (h *MessageHandlerImpl) startGame(client *Client, roomID uuid.UUID, message []byte) {
 	var req requests.StartGameRequest
 	if err := json.Unmarshal(message, &req); err != nil {
 		sendError(client, "Invalid start_game_request format")
@@ -97,7 +100,7 @@ func (h *MessageHandlerImpl) startGame(client *Client, roomID uint, message []by
 	client.startCountdown(countdownDuration, roomID)
 }
 
-func (h *MessageHandlerImpl) endGame(client *Client, roomID uint, message []byte) {
+func (h *MessageHandlerImpl) endGame(client *Client, roomID uuid.UUID, message []byte) {
 	var req requests.EndGameRequest
 	if err := json.Unmarshal(message, &req); err != nil {
 		sendError(client, "Invalid end_game_request format")
@@ -108,13 +111,19 @@ func (h *MessageHandlerImpl) endGame(client *Client, roomID uint, message []byte
 		return
 	}
 
+	gameID, err := utils.StringToUUID(req.GameID)
+	if err != nil {
+		sendError(client, "Invalid game ID format")
+		return
+	}
+
 	permitted, err := h.permissionService.HasPermission(client.userID, services.GameRoomWritePermission, roomID)
 	if err != nil || !permitted {
 		sendError(client, err.Error())
 		return
 	}
 
-	game, players, err := h.gameService.EndGame(roomID, req.GameID)
+	game, players, err := h.gameService.EndGame(roomID, gameID)
 	if err != nil {
 		sendError(client, err.Error())
 		return
@@ -123,7 +132,7 @@ func (h *MessageHandlerImpl) endGame(client *Client, roomID uint, message []byte
 	sendResponse(client, response)
 }
 
-func (h *MessageHandlerImpl) submitAnswer(client *Client, roomID uint, message []byte) {
+func (h *MessageHandlerImpl) submitAnswer(client *Client, roomID uuid.UUID, message []byte) {
 	var req requests.SubmitAnswerRequest
 	if err := json.Unmarshal(message, &req); err != nil {
 		sendError(client, "Invalid submit_answer_request format")
@@ -134,7 +143,13 @@ func (h *MessageHandlerImpl) submitAnswer(client *Client, roomID uint, message [
 		return
 	}
 
-	if err := h.answerService.CreateOrUpdateAnswer(roomID, req.Answer, client.userID, req.GamePromptID); err != nil {
+	gamePromptID, err := utils.StringToUUID(req.GamePromptID)
+	if err != nil {
+		sendError(client, "Invalid game prompt ID format")
+		return
+	}
+
+	if err := h.answerService.CreateOrUpdateAnswer(roomID, req.Answer, client.userID, gamePromptID); err != nil {
 		sendError(client, "Failed to save answer"+err.Error())
 		return
 	}
@@ -145,7 +160,7 @@ func (h *MessageHandlerImpl) submitAnswer(client *Client, roomID uint, message [
 	})
 }
 
-func (h *MessageHandlerImpl) updateGameConfig(client *Client, roomID uint, message []byte) {
+func (h *MessageHandlerImpl) updateGameConfig(client *Client, roomID uuid.UUID, message []byte) {
 	var req requests.UpdateGameConfigRequest
 	if err := json.Unmarshal(message, &req); err != nil {
 		sendError(client, "Invalid update_game_config_request format")

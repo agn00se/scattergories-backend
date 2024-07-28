@@ -10,6 +10,7 @@ import (
 	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type UserHandler interface {
@@ -56,7 +57,7 @@ func (h *UserHandlerImpl) GetAllUsers(c *gin.Context) {
 }
 
 func (h *UserHandlerImpl) GetUser(c *gin.Context) {
-	id, err := GetIDParam(c, "id")
+	id, err := GetUUIDParam(c, "id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid user ID")
 		return
@@ -114,14 +115,14 @@ func (h *UserHandlerImpl) CreateGuestAccount(c *gin.Context) {
 }
 
 func (h *UserHandlerImpl) DeleteAccount(c *gin.Context) {
-	id, err := GetIDParam(c, "id")
+	id, err := GetUUIDParam(c, "id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	userID, _ := c.Get("userID")
-	permitted, err := h.permissionService.HasPermission(userID.(uint), services.UserWritePermission, id)
+	permitted, err := h.permissionService.HasPermission(userID.(uuid.UUID), services.UserWritePermission, id)
 	if err != nil || !permitted {
 		HandleError(c, http.StatusUnauthorized, err.Error())
 		return

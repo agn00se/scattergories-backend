@@ -9,48 +9,12 @@ The project is organized into the following directories:
 - **cmd/scattergories**: Contains the entry point of the application.
 - **config**: Contains configuration files and scripts.
 - **internal**: Contains the core application logic divided into several subdirectories:
-  - **client**: Contains client-specific logic, including controllers, routes, and WebSocket handling.
-  - **models**: Defines the data models used in the application.
+  - **api**: Contains client-specific logic, including controllers, routes, and WebSocket handling.
+  - **domain**: Defines the data models used in the application.
   - **repositories**: Contains the data access logic and repository patterns for interacting with the database.
   - **services**: Contains business logic and services used by the controllers.
 - **pkg**: Contains utility packages and custom validators.
 - **test**: Contains test files for unit and integration tests.
-- **docs**: Documentation files.
-
-## Setup and Installation
-
-### Steps
-
-1. **Clone the repository**:
-
-    ```sh
-    git clone https://github.com/agn00se/scattergories-backend.git
-    cd scattergories-backend
-    ```
-
-2. **Set up the environment variables**:
-
-    Create a `.env` file in the root directory and add the necessary environment variables. Example:
-
-    ```env
-    DB_HOST=localhost
-    DB_USER=your_db_user
-    DB_NAME=your_db_name
-    DB_SSLMODE=disable
-    DB_PASSWORD=your_db_password
-    ```
-
-3. **Install dependencies**:
-
-    ```sh
-    go mod download
-    ```
-
-4. **Run the application**:
-
-    ```sh
-    go run ./cmd/scattergories/main.go
-    ```
 
 ## Usage
 
@@ -58,11 +22,16 @@ The project is organized into the following directories:
 
 The application exposes several API endpoints to manage users, game rooms, and games. Here are some of the key endpoints:
 
-- **User Management**:
+- **User Management**:  
+  - `POST /guests`: Join as a guest user.
   - `GET /users`: Retrieve all users.
   - `GET /users/:id`: Retrieve a single user by ID.
-  - `POST /users`: Create a guest user.
+  - `POST /users`: Create a new account.
   - `DELETE /users/:id`: Delete a user by ID.
+  - `POST /login`: Login.
+  - `POST /logout`: Logout.
+  - `POST /refresh-token`: Refresh token.
+
 
 - **Game Room Management**:
   - `GET /game-rooms`: Retrieve all game rooms.
@@ -84,11 +53,3 @@ The application also supports WebSocket connections for real-time communication:
     - `countdown_finish_response`: Return game-related information when the countdown finishes.
 
 This setup ensures a responsive and interactive gaming experience for all connected clients by leveraging WebSocket connections for real-time communication and updates.
-
-## Testing
-
-The project includes unit and integration tests located in the `test` directory. To run the tests, use the following command:
-
-```sh
-go test ./...
-```

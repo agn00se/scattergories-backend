@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -21,8 +22,8 @@ type TokenService interface {
 	InvalidateToken(tokenString string) error
 	IsTokenBlacklisted(tokenString string) (bool, error)
 	RefreshTokens(refreshToken string) (string, string, error)
-	GenerateJWT(userID uint, userType domain.UserType) (string, error)
-	GenerateRefreshToken(userID uint) (string, error)
+	GenerateJWT(userID uuid.UUID, userType domain.UserType) (string, error)
+	GenerateRefreshToken(userID uuid.UUID) (string, error)
 }
 
 type TokenServiceImpl struct {
@@ -78,7 +79,15 @@ func (s *TokenServiceImpl) RefreshTokens(refreshToken string) (string, string, e
 		return "", "", err
 	}
 
-	userID := uint(claims["user_id"].(float64))
+	// Extract and parse the user_id claim
+	userIDStr, ok := claims["user_id"].(string)
+	if !ok {
+		return "", "", common.ErrInvalidToken
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return "", "", err
+	}
 
 	// Check if the refresh token is still valid in Redis
 	if _, err := s.redisClient.Get(ctx, "refresh_token:"+refreshToken).Result(); err != nil {
@@ -109,9 +118,9 @@ func (s *TokenServiceImpl) RefreshTokens(refreshToken string) (string, string, e
 	return newAccessToken, newRefreshToken, nil
 }
 
-func (s *TokenServiceImpl) GenerateJWT(userID uint, userType domain.UserType) (string, error) {
+func (s *TokenServiceImpl) GenerateJWT(userID uuid.UUID, userType domain.UserType) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id":   userID,
+		"user_id":   userID.String(),
 		"user_type": string(userType),
 		"exp":       time.Now().Add(time.Hour * 24).Unix(), // 1 hour expiration
 	}
@@ -120,11 +129,11 @@ func (s *TokenServiceImpl) GenerateJWT(userID uint, userType domain.UserType) (s
 	return token.SignedString(jwtSecret)
 }
 
-func (s *TokenServiceImpl) GenerateRefreshToken(userID uint) (string, error) {
+func (s *TokenServiceImpl) GenerateRefreshToken(userID uuid.UUID) (string, error) {
 	duration := time.Hour * 24 * 7
 
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": userID,
+		"user_id": userID.String(),
 		"exp":     time.Now().Add(duration).Unix(), // 1 week expiration
 	})
 

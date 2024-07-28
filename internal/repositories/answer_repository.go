@@ -3,12 +3,13 @@ package repositories
 import (
 	"scattergories-backend/internal/domain"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type AnswerRepository interface {
-	GetAnswersByGameID(gameID uint) ([]*domain.Answer, error)
-	GetAnswerByPlayerAndPrompt(playerID uint, gamePromptID uint) (*domain.Answer, error)
+	GetAnswersByGameID(gameID uuid.UUID) ([]*domain.Answer, error)
+	GetAnswerByPlayerAndPrompt(playerID uuid.UUID, gamePromptID uuid.UUID) (*domain.Answer, error)
 	SaveAnswer(answer *domain.Answer) error
 	CreateAnswer(answer *domain.Answer) error
 }
@@ -21,7 +22,7 @@ func NewAnswerRepository(db *gorm.DB) AnswerRepository {
 	return &AnswerRepositoryImpl{db: db}
 }
 
-func (r *AnswerRepositoryImpl) GetAnswersByGameID(gameID uint) ([]*domain.Answer, error) {
+func (r *AnswerRepositoryImpl) GetAnswersByGameID(gameID uuid.UUID) ([]*domain.Answer, error) {
 	var answers []*domain.Answer
 	if err := r.db.Preload("Player.User").Preload("GamePrompt.Prompt").Where("game_prompt_id IN (?)",
 		r.db.Table("game_prompts").Select("id").Where("game_id = ?", gameID)).Find(&answers).Error; err != nil {
@@ -30,7 +31,7 @@ func (r *AnswerRepositoryImpl) GetAnswersByGameID(gameID uint) ([]*domain.Answer
 	return answers, nil
 }
 
-func (r *AnswerRepositoryImpl) GetAnswerByPlayerAndPrompt(playerID uint, gamePromptID uint) (*domain.Answer, error) {
+func (r *AnswerRepositoryImpl) GetAnswerByPlayerAndPrompt(playerID uuid.UUID, gamePromptID uuid.UUID) (*domain.Answer, error) {
 	var answer domain.Answer
 	err := r.db.Where("player_id = ? AND game_prompt_id = ?", playerID, gamePromptID).First(&answer).Error
 	if err != nil {

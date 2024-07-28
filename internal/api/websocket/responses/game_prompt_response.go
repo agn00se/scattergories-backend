@@ -1,15 +1,18 @@
 package responses
 
-import "scattergories-backend/internal/domain"
+import (
+	"scattergories-backend/internal/domain"
+	"scattergories-backend/pkg/utils"
+)
 
 type GamePromptResponse struct {
-	ID     uint            `json:"id"`
+	ID     string          `json:"id"`
 	Prompt *PromptResponse `json:"prompt"`
 }
 
 func ToGamePromptResponse(gamePrompt *domain.GamePrompt) *GamePromptResponse {
 	return &GamePromptResponse{
-		ID:     gamePrompt.ID,
+		ID:     utils.UUIDToString(gamePrompt.ID),
 		Prompt: toPromptResponse(&gamePrompt.Prompt),
 	}
 }

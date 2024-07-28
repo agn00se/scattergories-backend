@@ -4,11 +4,12 @@ import (
 	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/domain"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type GameRoomConfigRepository interface {
-	GetGameRoomConfigByRoomID(roomID uint) (*domain.GameRoomConfig, error)
+	GetGameRoomConfigByRoomID(roomID uuid.UUID) (*domain.GameRoomConfig, error)
 	CreateGameRoomConfig(gameRoomConfig *domain.GameRoomConfig) error
 	UpdateGameRoomConfig(gameRoomConfig *domain.GameRoomConfig) error
 }
@@ -21,7 +22,7 @@ func NewGameRoomConfigRepository(db *gorm.DB) GameRoomConfigRepository {
 	return &GameRoomConfigRepositoryImpl{db: db}
 }
 
-func (r *GameRoomConfigRepositoryImpl) GetGameRoomConfigByRoomID(roomID uint) (*domain.GameRoomConfig, error) {
+func (r *GameRoomConfigRepositoryImpl) GetGameRoomConfigByRoomID(roomID uuid.UUID) (*domain.GameRoomConfig, error) {
 	var gameRoomConfig domain.GameRoomConfig
 	if err := r.db.First(&gameRoomConfig, "game_room_id = ?", roomID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {

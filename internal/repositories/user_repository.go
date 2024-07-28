@@ -4,17 +4,18 @@ import (
 	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/domain"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type UserRepository interface {
-	GetUserByID(id uint) (*domain.User, error)
+	GetUserByID(id uuid.UUID) (*domain.User, error)
 	GetUserByEmail(email string) (*domain.User, error)
-	GetUsersByGameRoomID(roomID uint) ([]*domain.User, error)
+	GetUsersByGameRoomID(roomID uuid.UUID) ([]*domain.User, error)
 	GetAllUsers() ([]*domain.User, error)
 	CreateUser(user *domain.User) error
 	UpdateUser(user *domain.User) error
-	DeleteUserByID(id uint) *gorm.DB
+	DeleteUserByID(id uuid.UUID) *gorm.DB
 }
 
 type UserRepositoryImpl struct {
@@ -25,7 +26,7 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	return &UserRepositoryImpl{db: db}
 }
 
-func (r *UserRepositoryImpl) GetUserByID(id uint) (*domain.User, error) {
+func (r *UserRepositoryImpl) GetUserByID(id uuid.UUID) (*domain.User, error) {
 	var user domain.User
 	if err := r.db.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -47,7 +48,7 @@ func (r *UserRepositoryImpl) GetUserByEmail(email string) (*domain.User, error) 
 	return &user, nil
 }
 
-func (r *UserRepositoryImpl) GetUsersByGameRoomID(roomID uint) ([]*domain.User, error) {
+func (r *UserRepositoryImpl) GetUsersByGameRoomID(roomID uuid.UUID) ([]*domain.User, error) {
 	var users []*domain.User
 	if err := r.db.Where("game_room_id = ?", roomID).Find(&users).Error; err != nil {
 		return nil, err
@@ -71,7 +72,7 @@ func (r *UserRepositoryImpl) UpdateUser(user *domain.User) error {
 	return r.db.Save(user).Error
 }
 
-func (r *UserRepositoryImpl) DeleteUserByID(id uint) *gorm.DB {
+func (r *UserRepositoryImpl) DeleteUserByID(id uuid.UUID) *gorm.DB {
 	result := r.db.Unscoped().Delete(&domain.User{}, id)
 	if result.Error != nil {
 		return result

@@ -1,8 +1,6 @@
 package domain
 
-import "gorm.io/gorm"
-
 type Prompt struct {
-	gorm.Model
+	BaseModel
 	Text string `gorm:"not null;unique" json:"text"`
 }

@@ -6,6 +6,7 @@ import (
 	"scattergories-backend/internal/repositories"
 	"scattergories-backend/pkg/utils"
 
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
 
@@ -13,11 +14,11 @@ const uniqueViolationCode = "23505"
 
 type UserService interface {
 	GetAllUsers() ([]*domain.User, error)
-	GetUserByID(id uint) (*domain.User, error)
+	GetUserByID(id uuid.UUID) (*domain.User, error)
 	CreateGuestUser() (*domain.User, error)
-	DeleteUserByID(id uint) error
+	DeleteUserByID(id uuid.UUID) error
 	GetUserByEmail(email string) (*domain.User, error)
-	GetUsersByGameRoomID(roomID uint) ([]*domain.User, error)
+	GetUsersByGameRoomID(roomID uuid.UUID) ([]*domain.User, error)
 	CreateUser(user *domain.User) (*domain.User, error)
 	UpdateUser(user *domain.User) error
 }
@@ -34,7 +35,7 @@ func (s *UserServiceImpl) GetAllUsers() ([]*domain.User, error) {
 	return s.userRepository.GetAllUsers()
 }
 
-func (s *UserServiceImpl) GetUserByID(id uint) (*domain.User, error) {
+func (s *UserServiceImpl) GetUserByID(id uuid.UUID) (*domain.User, error) {
 	return s.userRepository.GetUserByID(id)
 }
 
@@ -48,7 +49,7 @@ func (s *UserServiceImpl) CreateGuestUser() (*domain.User, error) {
 	return s.CreateUser(user)
 }
 
-func (s *UserServiceImpl) DeleteUserByID(id uint) error {
+func (s *UserServiceImpl) DeleteUserByID(id uuid.UUID) error {
 	result := s.userRepository.DeleteUserByID(id)
 	if result.Error != nil {
 		return result.Error
@@ -60,7 +61,7 @@ func (s *UserServiceImpl) GetUserByEmail(email string) (*domain.User, error) {
 	return s.userRepository.GetUserByEmail(email)
 }
 
-func (s *UserServiceImpl) GetUsersByGameRoomID(roomID uint) ([]*domain.User, error) {
+func (s *UserServiceImpl) GetUsersByGameRoomID(roomID uuid.UUID) ([]*domain.User, error) {
 	return s.userRepository.GetUsersByGameRoomID(roomID)
 }
 

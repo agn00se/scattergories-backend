@@ -5,16 +5,18 @@ import (
 	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
 	"scattergories-backend/pkg/utils"
+
+	"github.com/google/uuid"
 )
 
 type GameRoomService interface {
-	CreateGameRoom(hostID uint, isPrivate bool, passcode string) (*domain.GameRoom, error)
+	CreateGameRoom(hostID uuid.UUID, isPrivate bool, passcode string) (*domain.GameRoom, error)
 	GetAllGameRooms() ([]*domain.GameRoom, error)
-	GetGameRoomByID(roomID uint) (*domain.GameRoom, error)
-	DeleteGameRoomByID(roomID uint) error
-	UpdateHost(roomID uint, newHostID uint) (*domain.GameRoom, error)
-	VerifyGameRoomHost(roomID uint, userID uint, errorMessage error) error
-	VerifyHostNotInOtherRoom(hostID uint) error
+	GetGameRoomByID(roomID uuid.UUID) (*domain.GameRoom, error)
+	DeleteGameRoomByID(roomID uuid.UUID) error
+	UpdateHost(roomID uuid.UUID, newHostID uuid.UUID) (*domain.GameRoom, error)
+	VerifyGameRoomHost(roomID uuid.UUID, userID uuid.UUID, errorMessage error) error
+	VerifyHostNotInOtherRoom(hostID uuid.UUID) error
 }
 
 type GameRoomServiceImpl struct {
@@ -31,7 +33,7 @@ func NewGameRoomService(gameRoomRepository repositories.GameRoomRepository, user
 	}
 }
 
-func (s *GameRoomServiceImpl) CreateGameRoom(hostID uint, isPrivate bool, passcode string) (*domain.GameRoom, error) {
+func (s *GameRoomServiceImpl) CreateGameRoom(hostID uuid.UUID, isPrivate bool, passcode string) (*domain.GameRoom, error) {
 	// Verify that the host user exists
 	host, err := s.userService.GetUserByID(hostID)
 	if err != nil {
@@ -77,11 +79,11 @@ func (s *GameRoomServiceImpl) GetAllGameRooms() ([]*domain.GameRoom, error) {
 	return s.gameRoomRepository.GetAllGameRooms()
 }
 
-func (s *GameRoomServiceImpl) GetGameRoomByID(roomID uint) (*domain.GameRoom, error) {
+func (s *GameRoomServiceImpl) GetGameRoomByID(roomID uuid.UUID) (*domain.GameRoom, error) {
 	return s.gameRoomRepository.GetGameRoomByID(roomID)
 }
 
-func (s *GameRoomServiceImpl) DeleteGameRoomByID(roomID uint) error {
+func (s *GameRoomServiceImpl) DeleteGameRoomByID(roomID uuid.UUID) error {
 	result := s.gameRoomRepository.DeleteGameRoomByID(roomID)
 	if result.Error != nil {
 		return result.Error
@@ -89,7 +91,7 @@ func (s *GameRoomServiceImpl) DeleteGameRoomByID(roomID uint) error {
 	return nil
 }
 
-func (s *GameRoomServiceImpl) UpdateHost(roomID uint, newHostID uint) (*domain.GameRoom, error) {
+func (s *GameRoomServiceImpl) UpdateHost(roomID uuid.UUID, newHostID uuid.UUID) (*domain.GameRoom, error) {
 	// Get the game room
 	gameRoom, err := s.GetGameRoomByID(roomID)
 	if err != nil {
@@ -118,7 +120,7 @@ func (s *GameRoomServiceImpl) UpdateHost(roomID uint, newHostID uint) (*domain.G
 	return gameRoomResponse, nil
 }
 
-func (s *GameRoomServiceImpl) VerifyGameRoomHost(roomID uint, userID uint, errorMessage error) error {
+func (s *GameRoomServiceImpl) VerifyGameRoomHost(roomID uuid.UUID, userID uuid.UUID, errorMessage error) error {
 	gameRoom, err := s.GetGameRoomByID(roomID)
 	if err != nil {
 		return err
@@ -130,7 +132,7 @@ func (s *GameRoomServiceImpl) VerifyGameRoomHost(roomID uint, userID uint, error
 	return nil
 }
 
-func (s *GameRoomServiceImpl) VerifyHostNotInOtherRoom(hostID uint) error {
+func (s *GameRoomServiceImpl) VerifyHostNotInOtherRoom(hostID uuid.UUID) error {
 	_, err := s.gameRoomRepository.GetGameRoomGivenHost(hostID)
 	if err != nil {
 		if err == common.ErrGameRoomWithGivenHostNotFound {

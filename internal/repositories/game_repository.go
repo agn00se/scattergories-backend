@@ -4,12 +4,13 @@ import (
 	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/domain"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type GameRepository interface {
-	GetGameByID(id uint) (*domain.Game, error)
-	GetGameByRoomIDAndStatus(roomID uint, statuses ...string) (*domain.Game, error)
+	GetGameByID(id uuid.UUID) (*domain.Game, error)
+	GetGameByRoomIDAndStatus(roomID uuid.UUID, statuses ...string) (*domain.Game, error)
 	CreateGame(game *domain.Game) error
 	UpdateGame(game *domain.Game) error
 }
@@ -22,7 +23,7 @@ func NewGameRepository(db *gorm.DB) GameRepository {
 	return &GameRepositoryImpl{db: db}
 }
 
-func (r *GameRepositoryImpl) GetGameByID(id uint) (*domain.Game, error) {
+func (r *GameRepositoryImpl) GetGameByID(id uuid.UUID) (*domain.Game, error) {
 	var game domain.Game
 	if err := r.db.First(&game, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -33,7 +34,7 @@ func (r *GameRepositoryImpl) GetGameByID(id uint) (*domain.Game, error) {
 	return &game, nil
 }
 
-func (r *GameRepositoryImpl) GetGameByRoomIDAndStatus(roomID uint, statuses ...string) (*domain.Game, error) {
+func (r *GameRepositoryImpl) GetGameByRoomIDAndStatus(roomID uuid.UUID, statuses ...string) (*domain.Game, error) {
 	var game domain.Game
 	err := r.db.Where("game_room_id = ? AND status IN ?", roomID, statuses).First(&game).Error
 	if err != nil {

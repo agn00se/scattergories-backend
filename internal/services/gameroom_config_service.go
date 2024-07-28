@@ -5,6 +5,8 @@ import (
 	"scattergories-backend/internal/repositories"
 	"scattergories-backend/pkg/utils"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -14,8 +16,8 @@ var (
 
 type GameConfigService interface {
 	UpdateGameConfig(request *domain.GameRoomConfig) (*domain.GameRoomConfig, error)
-	GetGameRoomConfigByRoomID(roomID uint) (*domain.GameRoomConfig, error)
-	CreateDefaultGameRoomConfig(gameRoomID uint) error
+	GetGameRoomConfigByRoomID(roomID uuid.UUID) (*domain.GameRoomConfig, error)
+	CreateDefaultGameRoomConfig(gameRoomID uuid.UUID) error
 }
 
 type GameConfigServiceImpl struct {
@@ -45,11 +47,11 @@ func (s *GameConfigServiceImpl) UpdateGameConfig(request *domain.GameRoomConfig)
 	return gameRoomConfig, nil
 }
 
-func (s *GameConfigServiceImpl) GetGameRoomConfigByRoomID(roomID uint) (*domain.GameRoomConfig, error) {
+func (s *GameConfigServiceImpl) GetGameRoomConfigByRoomID(roomID uuid.UUID) (*domain.GameRoomConfig, error) {
 	return s.gameRoomConfigRepository.GetGameRoomConfigByRoomID(roomID)
 }
 
-func (s *GameConfigServiceImpl) CreateDefaultGameRoomConfig(gameRoomID uint) error {
+func (s *GameConfigServiceImpl) CreateDefaultGameRoomConfig(gameRoomID uuid.UUID) error {
 	gameRoomConfig := &domain.GameRoomConfig{
 		GameRoomID:      gameRoomID,
 		TimeLimit:       defaultTimeLimit,

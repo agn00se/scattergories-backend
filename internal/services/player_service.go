@@ -3,13 +3,15 @@ package services
 import (
 	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
+
+	"github.com/google/uuid"
 )
 
 type PlayerService interface {
-	GetPlayersByGameID(gameID uint) ([]*domain.Player, error)
-	GetPlayerByUserIDAndGameID(userID uint, gameID uint) (*domain.Player, error)
+	GetPlayersByGameID(gameID uuid.UUID) ([]*domain.Player, error)
+	GetPlayerByUserIDAndGameID(userID uuid.UUID, gameID uuid.UUID) (*domain.Player, error)
 	CreatePlayersInGame(game *domain.Game) error
-	CreatePlayer(userID uint, gameID uint) error
+	CreatePlayer(userID uuid.UUID, gameID uuid.UUID) error
 }
 
 type PlayerServiceImpl struct {
@@ -21,11 +23,11 @@ func NewPlayerService(playerRepository repositories.PlayerRepository, userServic
 	return &PlayerServiceImpl{playerRepository: playerRepository, userService: userService}
 }
 
-func (s *PlayerServiceImpl) GetPlayersByGameID(gameID uint) ([]*domain.Player, error) {
+func (s *PlayerServiceImpl) GetPlayersByGameID(gameID uuid.UUID) ([]*domain.Player, error) {
 	return s.playerRepository.GetPlayersByGameID(gameID)
 }
 
-func (s *PlayerServiceImpl) GetPlayerByUserIDAndGameID(userID uint, gameID uint) (*domain.Player, error) {
+func (s *PlayerServiceImpl) GetPlayerByUserIDAndGameID(userID uuid.UUID, gameID uuid.UUID) (*domain.Player, error) {
 	return s.playerRepository.GetPlayerByUserIDGameID(userID, gameID)
 }
 
@@ -43,7 +45,7 @@ func (s *PlayerServiceImpl) CreatePlayersInGame(game *domain.Game) error {
 	return nil
 }
 
-func (s *PlayerServiceImpl) CreatePlayer(userID uint, gameID uint) error {
+func (s *PlayerServiceImpl) CreatePlayer(userID uuid.UUID, gameID uuid.UUID) error {
 	gamePlayer := &domain.Player{
 		UserID: userID,
 		GameID: gameID,

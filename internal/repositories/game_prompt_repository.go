@@ -3,12 +3,13 @@ package repositories
 import (
 	"scattergories-backend/internal/domain"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type GamePromptRepository interface {
-	GetGamePromptsByGameID(gameID uint) ([]*domain.GamePrompt, error)
-	GetGameIDByGamePromptID(gamePromptID uint) (uint, error)
+	GetGamePromptsByGameID(gameID uuid.UUID) ([]*domain.GamePrompt, error)
+	GetGameIDByGamePromptID(gamePromptID uuid.UUID) (uuid.UUID, error)
 	CreateGamePrompt(gamePrompt *domain.GamePrompt) error
 }
 
@@ -20,7 +21,7 @@ func NewGamePromptRepository(db *gorm.DB) GamePromptRepository {
 	return &GamePromptRepositoryImpl{db: db}
 }
 
-func (r *GamePromptRepositoryImpl) GetGamePromptsByGameID(gameID uint) ([]*domain.GamePrompt, error) {
+func (r *GamePromptRepositoryImpl) GetGamePromptsByGameID(gameID uuid.UUID) ([]*domain.GamePrompt, error) {
 	var gamePrompts []*domain.GamePrompt
 	if err := r.db.Where("game_id = ?", gameID).Preload("Prompt").Find(&gamePrompts).Error; err != nil {
 		return nil, err
@@ -28,10 +29,10 @@ func (r *GamePromptRepositoryImpl) GetGamePromptsByGameID(gameID uint) ([]*domai
 	return gamePrompts, nil
 }
 
-func (r *GamePromptRepositoryImpl) GetGameIDByGamePromptID(gamePromptID uint) (uint, error) {
+func (r *GamePromptRepositoryImpl) GetGameIDByGamePromptID(gamePromptID uuid.UUID) (uuid.UUID, error) {
 	var gamePrompt domain.GamePrompt
 	if err := r.db.Where("id = ?", gamePromptID).First(&gamePrompt).Error; err != nil {
-		return 0, err
+		return uuid.Nil, err
 	}
 	return gamePrompt.GameID, nil
 }

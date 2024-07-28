@@ -3,10 +3,12 @@ package services
 import (
 	"scattergories-backend/internal/domain"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type GameRoomDataService interface {
-	LoadDataForRoom(roomID uint) (*domain.Game, []*domain.Answer, error)
+	LoadDataForRoom(roomID uuid.UUID) (*domain.Game, []*domain.Answer, error)
 }
 
 type GameRoomDataServiceImpl struct {
@@ -21,7 +23,7 @@ func NewGameRoomDataService(answerService AnswerService, gameService GameService
 	}
 }
 
-func (s *GameRoomDataServiceImpl) LoadDataForRoom(roomID uint) (*domain.Game, []*domain.Answer, error) {
+func (s *GameRoomDataServiceImpl) LoadDataForRoom(roomID uuid.UUID) (*domain.Game, []*domain.Answer, error) {
 	// Get the Ongoing game
 	game, err := s.gameService.GetOngoingGameInRoom(roomID)
 	if err != nil {

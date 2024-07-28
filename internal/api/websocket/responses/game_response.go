@@ -2,12 +2,13 @@ package responses
 
 import (
 	"scattergories-backend/internal/domain"
+	"scattergories-backend/pkg/utils"
 	"time"
 )
 
 type GameResponse struct {
-	ID         uint              `json:"id"`
-	GameRoomID uint              `json:"room_id"`
+	ID         string            `json:"id"`
+	GameRoomID string            `json:"room_id"`
 	Status     domain.GameStatus `json:"status"`
 	StartTime  time.Time         `json:"start_time"`
 	EndTime    time.Time         `json:"end_time"`
@@ -15,8 +16,8 @@ type GameResponse struct {
 
 func ToGameResponse(game *domain.Game) *GameResponse {
 	return &GameResponse{
-		ID:         game.ID,
-		GameRoomID: game.GameRoomID,
+		ID:         utils.UUIDToString(game.ID),
+		GameRoomID: utils.UUIDToString(game.GameRoomID),
 		Status:     game.Status,
 		StartTime:  game.StartTime,
 		EndTime:    game.EndTime,

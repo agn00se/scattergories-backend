@@ -7,16 +7,17 @@ import (
 
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type GameService interface {
-	StartGame(roomID uint) (*domain.Game, *domain.GameRoomConfig, []*domain.GamePrompt, error)
-	EndGame(roomID uint, gameID uint) (*domain.Game, []*domain.Player, error)
+	StartGame(roomID uuid.UUID) (*domain.Game, *domain.GameRoomConfig, []*domain.GamePrompt, error)
+	EndGame(roomID uuid.UUID, gameID uuid.UUID) (*domain.Game, []*domain.Player, error)
 	UpdateGame(game *domain.Game) error
-	GetGameByID(gameID uint) (*domain.Game, error)
-	VerifyNoActiveGameInRoom(roomID uint) error
-	GetOngoingGameInRoom(roomID uint) (*domain.Game, error)
+	GetGameByID(gameID uuid.UUID) (*domain.Game, error)
+	VerifyNoActiveGameInRoom(roomID uuid.UUID) error
+	GetOngoingGameInRoom(roomID uuid.UUID) (*domain.Game, error)
 }
 
 type GameServiceImpl struct {
@@ -35,7 +36,7 @@ func NewGameService(gameRepository repositories.GameRepository, playerService Pl
 	}
 }
 
-func (s *GameServiceImpl) StartGame(roomID uint) (*domain.Game, *domain.GameRoomConfig, []*domain.GamePrompt, error) {
+func (s *GameServiceImpl) StartGame(roomID uuid.UUID) (*domain.Game, *domain.GameRoomConfig, []*domain.GamePrompt, error) {
 	// Verify no game at the Ongoing or Voting stage
 	if err := s.VerifyNoActiveGameInRoom(roomID); err != nil {
 		return nil, nil, nil, err
@@ -76,7 +77,7 @@ func (s *GameServiceImpl) StartGame(roomID uint) (*domain.Game, *domain.GameRoom
 	return game, gameRoomConfig, gamePrompts, nil
 }
 
-func (s *GameServiceImpl) EndGame(roomID uint, gameID uint) (*domain.Game, []*domain.Player, error) {
+func (s *GameServiceImpl) EndGame(roomID uuid.UUID, gameID uuid.UUID) (*domain.Game, []*domain.Player, error) {
 	// Find the game, set status to completed, and update the end time
 	game, err := s.GetGameByID(gameID)
 	if err != nil {
@@ -95,7 +96,7 @@ func (s *GameServiceImpl) EndGame(roomID uint, gameID uint) (*domain.Game, []*do
 	return game, players, nil
 }
 
-func (s *GameServiceImpl) GetGameByID(gameID uint) (*domain.Game, error) {
+func (s *GameServiceImpl) GetGameByID(gameID uuid.UUID) (*domain.Game, error) {
 	return s.gameRepository.GetGameByID(gameID)
 }
 
@@ -103,7 +104,7 @@ func (s *GameServiceImpl) UpdateGame(game *domain.Game) error {
 	return s.gameRepository.UpdateGame(game)
 }
 
-func (s *GameServiceImpl) VerifyNoActiveGameInRoom(roomID uint) error {
+func (s *GameServiceImpl) VerifyNoActiveGameInRoom(roomID uuid.UUID) error {
 	_, err := s.gameRepository.GetGameByRoomIDAndStatus(roomID, string(domain.GameStatusOngoing), string(domain.GameStatusVoting))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -114,7 +115,7 @@ func (s *GameServiceImpl) VerifyNoActiveGameInRoom(roomID uint) error {
 	return common.ErrActiveGameExists
 }
 
-func (s *GameServiceImpl) GetOngoingGameInRoom(roomID uint) (*domain.Game, error) {
+func (s *GameServiceImpl) GetOngoingGameInRoom(roomID uuid.UUID) (*domain.Game, error) {
 	game, err := s.gameRepository.GetGameByRoomIDAndStatus(roomID, string(domain.GameStatusOngoing))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {

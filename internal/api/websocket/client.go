@@ -6,6 +6,7 @@ import (
 	"scattergories-backend/internal/api/websocket/responses"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -15,8 +16,8 @@ import (
 // send - A channel for sending messages to the client.
 type Client struct {
 	conn    *websocket.Conn
-	roomID  uint
-	userID  uint
+	roomID  uuid.UUID
+	userID  uuid.UUID
 	send    chan []byte
 	handler MessageHandler
 }
@@ -103,14 +104,14 @@ func (c *Client) writePump() {
 }
 
 // This logic can be moved to client-side
-func (c *Client) startCountdown(duration time.Duration, roomID uint) {
+func (c *Client) startCountdown(duration time.Duration, roomID uuid.UUID) {
 	go func() {
 		time.Sleep(duration)
 		c.triggerWorkflow(roomID)
 	}()
 }
 
-func (c *Client) triggerWorkflow(roomID uint) {
+func (c *Client) triggerWorkflow(roomID uuid.UUID) {
 	game, answers, err := c.handler.LoadDataForRoom(roomID)
 	if err != nil {
 		sendError(c, "Error loading data")

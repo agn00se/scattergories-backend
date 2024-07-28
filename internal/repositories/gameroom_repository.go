@@ -4,16 +4,17 @@ import (
 	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/domain"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type GameRoomRepository interface {
-	GetGameRoomByID(roomID uint) (*domain.GameRoom, error)
-	GetGameRoomGivenHost(hostID uint) (*domain.GameRoom, error)
+	GetGameRoomByID(roomID uuid.UUID) (*domain.GameRoom, error)
+	GetGameRoomGivenHost(hostID uuid.UUID) (*domain.GameRoom, error)
 	GetAllGameRooms() ([]*domain.GameRoom, error)
 	CreateGameRoom(gameRoom *domain.GameRoom) error
 	UpdateGameRoom(gameRoom *domain.GameRoom) error
-	DeleteGameRoomByID(roomID uint) *gorm.DB
+	DeleteGameRoomByID(roomID uuid.UUID) *gorm.DB
 }
 
 type GameRoomRepositoryImpl struct {
@@ -24,7 +25,7 @@ func NewGameRoomRepository(db *gorm.DB) GameRoomRepository {
 	return &GameRoomRepositoryImpl{db: db}
 }
 
-func (r *GameRoomRepositoryImpl) GetGameRoomByID(roomID uint) (*domain.GameRoom, error) {
+func (r *GameRoomRepositoryImpl) GetGameRoomByID(roomID uuid.UUID) (*domain.GameRoom, error) {
 	var gameRoom domain.GameRoom
 
 	// Eager Preload - tells GORM to load the associated Host object when querying for the GameRoom.
@@ -37,7 +38,7 @@ func (r *GameRoomRepositoryImpl) GetGameRoomByID(roomID uint) (*domain.GameRoom,
 	return &gameRoom, nil
 }
 
-func (r *GameRoomRepositoryImpl) GetGameRoomGivenHost(hostID uint) (*domain.GameRoom, error) {
+func (r *GameRoomRepositoryImpl) GetGameRoomGivenHost(hostID uuid.UUID) (*domain.GameRoom, error) {
 	var existingGameRoom domain.GameRoom
 	if err := r.db.Where("host_id = ?", hostID).First(&existingGameRoom).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -64,7 +65,7 @@ func (r *GameRoomRepositoryImpl) UpdateGameRoom(gameRoom *domain.GameRoom) error
 	return r.db.Save(&gameRoom).Error
 }
 
-func (r *GameRoomRepositoryImpl) DeleteGameRoomByID(roomID uint) *gorm.DB {
+func (r *GameRoomRepositoryImpl) DeleteGameRoomByID(roomID uuid.UUID) *gorm.DB {
 	// Delete game room should also delete on cascade any associated
 	// game, player, game prompt, game config, and answer from the database
 	result := r.db.Unscoped().Delete(&domain.GameRoom{}, roomID)

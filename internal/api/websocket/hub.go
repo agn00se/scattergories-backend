@@ -6,6 +6,7 @@ import (
 	"scattergories-backend/internal/api/handlers"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 )
@@ -14,7 +15,7 @@ import (
 type Hub struct {
 	// rooms maps room IDs to a set of active clients in that room. Active client is being kept track by a map of all connected clients
 	// where key is a pointer to a Client struct and value is a boolean means active.
-	rooms map[uint]map[*Client]bool
+	rooms map[uuid.UUID]map[*Client]bool
 	// broadcast is a channel for broadcasting messages to all client in a room
 	broadcast chan Message
 	// register is a channel for registering new clients.
@@ -25,7 +26,7 @@ type Hub struct {
 
 // A global instance of Hub is created with initialized channels and an empty clients map.
 var HubInstance = &Hub{
-	rooms:      make(map[uint]map[*Client]bool),
+	rooms:      make(map[uuid.UUID]map[*Client]bool),
 	broadcast:  make(chan Message),
 	register:   make(chan *Client),
 	unregister: make(chan *Client),
@@ -33,7 +34,7 @@ var HubInstance = &Hub{
 
 // Message represents a message to be broadcasted to a room.
 type Message struct {
-	RoomID  uint
+	RoomID  uuid.UUID
 	Content []byte
 }
 
@@ -94,7 +95,7 @@ func HandleWebSocket(c *gin.Context, handler MessageHandler) {
 		return
 	}
 
-	roomID, err := handlers.GetIDParam(c, "room_id")
+	roomID, err := handlers.GetUUIDParam(c, "room_id")
 	if err != nil {
 		handlers.HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
@@ -118,7 +119,7 @@ func HandleWebSocket(c *gin.Context, handler MessageHandler) {
 		return
 	}
 
-	client := &Client{conn: conn, roomID: roomID, userID: userID.(uint), send: make(chan []byte, 256), handler: handler}
+	client := &Client{conn: conn, roomID: roomID, userID: userID.(uuid.UUID), send: make(chan []byte, 256), handler: handler}
 	HubInstance.register <- client // send the client to the hub.register channel
 
 	// writePump is typically run in a separate goroutine to allow the readPump to handle incoming messages immediately.

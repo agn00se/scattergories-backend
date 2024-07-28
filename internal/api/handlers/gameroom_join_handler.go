@@ -6,6 +6,7 @@ import (
 	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type GameRoomJoinHandler interface {
@@ -22,15 +23,15 @@ func NewGameRoomJoinHandler(gameRoomJoinService services.GameRoomJoinService) Ga
 }
 
 func (h *GameRoomJoinHandlerImpl) JoinGameRoom(c *gin.Context) {
-	roomID, err := GetIDParam(c, "room_id")
+	roomID, err := GetUUIDParam(c, "room_id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
 	}
 
-	userID := c.MustGet("userID").(uint)
+	userID, _ := c.Get("userID")
 
-	err = h.gameRoomJoinService.JoinGameRoom(userID, roomID)
+	err = h.gameRoomJoinService.JoinGameRoom(userID.(uuid.UUID), roomID)
 	if err != nil {
 		if err == common.ErrGameRoomNotFound || err == common.ErrUserNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
@@ -46,15 +47,15 @@ func (h *GameRoomJoinHandlerImpl) JoinGameRoom(c *gin.Context) {
 }
 
 func (h *GameRoomJoinHandlerImpl) LeaveGameRoom(c *gin.Context) {
-	roomID, err := GetIDParam(c, "room_id")
+	roomID, err := GetUUIDParam(c, "room_id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
 	}
 
-	userID := c.MustGet("userID").(uint)
+	userID, _ := c.Get("userID")
 
-	err = h.gameRoomJoinService.LeaveGameRoom(userID, roomID)
+	err = h.gameRoomJoinService.LeaveGameRoom(userID.(uuid.UUID), roomID)
 	if err != nil {
 		if err == common.ErrGameRoomNotFound || err == common.ErrUserNotFound || err == common.ErrUserNotInSpecifiedRoom {
 			HandleError(c, http.StatusNotFound, err.Error())

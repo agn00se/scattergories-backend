@@ -2,13 +2,15 @@ package services
 
 import (
 	"scattergories-backend/internal/common"
+
+	"github.com/google/uuid"
 )
 
 var roomCapacity = 6
 
 type GameRoomJoinService interface {
-	JoinGameRoom(userID uint, roomID uint) error
-	LeaveGameRoom(userID uint, roomID uint) error
+	JoinGameRoom(userID uuid.UUID, roomID uuid.UUID) error
+	LeaveGameRoom(userID uuid.UUID, roomID uuid.UUID) error
 }
 
 type GameRoomJoinServiceImpl struct {
@@ -25,7 +27,7 @@ func NewGameRoomJoinService(gameRoomService GameRoomService, userService UserSer
 	}
 }
 
-func (s *GameRoomJoinServiceImpl) JoinGameRoom(userID uint, roomID uint) error {
+func (s *GameRoomJoinServiceImpl) JoinGameRoom(userID uuid.UUID, roomID uuid.UUID) error {
 	// Verify game room exists
 	_, err := s.gameRoomService.GetGameRoomByID(roomID)
 	if err != nil {
@@ -57,7 +59,7 @@ func (s *GameRoomJoinServiceImpl) JoinGameRoom(userID uint, roomID uint) error {
 	return s.userService.UpdateUser(user)
 }
 
-func (s *GameRoomJoinServiceImpl) LeaveGameRoom(userID uint, roomID uint) error {
+func (s *GameRoomJoinServiceImpl) LeaveGameRoom(userID uuid.UUID, roomID uuid.UUID) error {
 	// Verify game room exists
 	gameRoom, err := s.gameRoomService.GetGameRoomByID(roomID)
 	if err != nil {

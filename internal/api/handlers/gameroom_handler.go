@@ -8,6 +8,7 @@ import (
 	"scattergories-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type GameRoomHandler interface {
@@ -42,14 +43,14 @@ func (h *GameRoomHandlerImpl) GetAllGameRooms(c *gin.Context) {
 }
 
 func (h *GameRoomHandlerImpl) GetGameRoom(c *gin.Context) {
-	roomID, err := GetIDParam(c, "room_id")
+	roomID, err := GetUUIDParam(c, "room_id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
 	}
 
 	userID, _ := c.Get("userID")
-	permitted, err := h.permissionService.HasPermission(userID.(uint), services.GameRoomReadPermission, roomID)
+	permitted, err := h.permissionService.HasPermission(userID.(uuid.UUID), services.GameRoomReadPermission, roomID)
 	if err != nil || !permitted {
 		HandleError(c, http.StatusUnauthorized, err.Error())
 		return
@@ -76,9 +77,9 @@ func (h *GameRoomHandlerImpl) CreateGameRoom(c *gin.Context) {
 		return
 	}
 
-	hostID := c.MustGet("userID").(uint)
+	hostID, _ := c.Get("userID")
 
-	gameRoom, err := h.gameRoomService.CreateGameRoom(hostID, request.IsPrivate, request.Passcode)
+	gameRoom, err := h.gameRoomService.CreateGameRoom(hostID.(uuid.UUID), request.IsPrivate, request.Passcode)
 	if err != nil {
 		if err == common.ErrUserNotFound {
 			HandleError(c, http.StatusNotFound, err.Error())
@@ -95,14 +96,14 @@ func (h *GameRoomHandlerImpl) CreateGameRoom(c *gin.Context) {
 }
 
 func (h *GameRoomHandlerImpl) DeleteGameRoom(c *gin.Context) {
-	id, err := GetIDParam(c, "room_id")
+	id, err := GetUUIDParam(c, "room_id")
 	if err != nil {
 		HandleError(c, http.StatusBadRequest, "Invalid room ID")
 		return
 	}
 
 	userID, _ := c.Get("userID")
-	permitted, err := h.permissionService.HasPermission(userID.(uint), services.GameRoomWritePermission, id)
+	permitted, err := h.permissionService.HasPermission(userID.(uuid.UUID), services.GameRoomWritePermission, id)
 	if err != nil || !permitted {
 		HandleError(c, http.StatusUnauthorized, err.Error())
 		return

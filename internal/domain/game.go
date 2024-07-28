@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/google/uuid"
 )
 
 type GameStatus string
@@ -15,8 +15,8 @@ const (
 )
 
 type Game struct {
-	gorm.Model
-	GameRoomID  uint         `gorm:"not null;index" json:"room_id"`
+	BaseModel
+	GameRoomID  uuid.UUID    `gorm:"type:uuid;not null;index" json:"room_id"`
 	Status      GameStatus   `gorm:"type:varchar(20);not null" json:"status"`
 	StartTime   time.Time    `json:"start_time"`
 	EndTime     time.Time    `json:"end_time"`

@@ -1,16 +1,19 @@
 package responses
 
-import "scattergories-backend/internal/domain"
+import (
+	"scattergories-backend/internal/domain"
+	"scattergories-backend/pkg/utils"
+)
 
 type PlayerResponse struct {
-	UserID uint   `json:"user_id"`
+	UserID string `json:"user_id"`
 	Name   string `json:"name"`
 	Score  int    `json:"score"`
 }
 
 func ToPlayerResponse(player *domain.Player) *PlayerResponse {
 	return &PlayerResponse{
-		UserID: player.UserID,
+		UserID: utils.UUIDToString(player.UserID),
 		Name:   player.User.Name,
 		Score:  player.Score,
 	}

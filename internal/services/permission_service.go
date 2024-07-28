@@ -2,6 +2,8 @@ package services
 
 import (
 	"scattergories-backend/internal/common"
+
+	"github.com/google/uuid"
 )
 
 type PermissionType string
@@ -13,7 +15,7 @@ const (
 )
 
 type PermissionService interface {
-	HasPermission(userID uint, permissionType PermissionType, resourceID uint) (bool, error)
+	HasPermission(userID uuid.UUID, permissionType PermissionType, resourceID uuid.UUID) (bool, error)
 }
 
 type PermissionServiceImpl struct {
@@ -28,7 +30,7 @@ func NewPermissionService(userService UserService, gameRoomService GameRoomServi
 	}
 }
 
-func (s *PermissionServiceImpl) HasPermission(userID uint, permissionType PermissionType, resourceID uint) (bool, error) {
+func (s *PermissionServiceImpl) HasPermission(userID uuid.UUID, permissionType PermissionType, resourceID uuid.UUID) (bool, error) {
 	switch permissionType {
 	case GameRoomReadPermission:
 		return s.hasGameRoomReadPermission(userID, resourceID)
@@ -41,7 +43,7 @@ func (s *PermissionServiceImpl) HasPermission(userID uint, permissionType Permis
 }
 
 // GetGameRoom
-func (s *PermissionServiceImpl) hasGameRoomReadPermission(userID uint, resourceID uint) (bool, error) {
+func (s *PermissionServiceImpl) hasGameRoomReadPermission(userID uuid.UUID, resourceID uuid.UUID) (bool, error) {
 	// Verify game room exists
 	if _, err := s.GameRoomService.GetGameRoomByID(resourceID); err != nil {
 		return false, err
@@ -61,7 +63,7 @@ func (s *PermissionServiceImpl) hasGameRoomReadPermission(userID uint, resourceI
 }
 
 // DeleteGameRoom, StartGame, EndGame, UpdateGameConfig
-func (s *PermissionServiceImpl) hasGameRoomWritePermission(userID uint, resourceID uint) (bool, error) {
+func (s *PermissionServiceImpl) hasGameRoomWritePermission(userID uuid.UUID, resourceID uuid.UUID) (bool, error) {
 	// Verify user exists
 	_, err := s.UserService.GetUserByID(userID)
 	if err != nil {
@@ -80,7 +82,7 @@ func (s *PermissionServiceImpl) hasGameRoomWritePermission(userID uint, resource
 }
 
 // UpdateUser, DeleteUser
-func (s *PermissionServiceImpl) hasUserWritePermission(userID uint, resourceID uint) (bool, error) {
+func (s *PermissionServiceImpl) hasUserWritePermission(userID uuid.UUID, resourceID uuid.UUID) (bool, error) {
 	// Verify user is the user being deleted
 	if userID != resourceID {
 		return false, common.ErrDeleteUserNotSelf

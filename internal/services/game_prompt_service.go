@@ -5,13 +5,14 @@ import (
 	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type GamePromptService interface {
-	getGamePromptsByGameID(gameID uint) ([]*domain.GamePrompt, error)
-	getGameIDByGamePromptID(gamePromptID uint) (uint, error)
-	createGamePrompts(gameID uint, numberOfPrompts int) error
+	getGamePromptsByGameID(gameID uuid.UUID) ([]*domain.GamePrompt, error)
+	getGameIDByGamePromptID(gamePromptID uuid.UUID) (uuid.UUID, error)
+	createGamePrompts(gameID uuid.UUID, numberOfPrompts int) error
 }
 
 type GamePromptServiceImpl struct {
@@ -26,22 +27,22 @@ func NewGamePromptService(gamePromptRepository repositories.GamePromptRepository
 	}
 }
 
-func (s *GamePromptServiceImpl) getGamePromptsByGameID(gameID uint) ([]*domain.GamePrompt, error) {
+func (s *GamePromptServiceImpl) getGamePromptsByGameID(gameID uuid.UUID) ([]*domain.GamePrompt, error) {
 	return s.gamePromptRepository.GetGamePromptsByGameID(gameID)
 }
 
-func (s *GamePromptServiceImpl) getGameIDByGamePromptID(gamePromptID uint) (uint, error) {
+func (s *GamePromptServiceImpl) getGameIDByGamePromptID(gamePromptID uuid.UUID) (uuid.UUID, error) {
 	gameID, err := s.gamePromptRepository.GetGameIDByGamePromptID(gamePromptID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return 0, common.ErrGamePromptNotFound
+			return uuid.Nil, common.ErrGamePromptNotFound
 		}
-		return 0, err
+		return uuid.Nil, err
 	}
 	return gameID, nil
 }
 
-func (s *GamePromptServiceImpl) createGamePrompts(gameID uint, numberOfPrompts int) error {
+func (s *GamePromptServiceImpl) createGamePrompts(gameID uuid.UUID, numberOfPrompts int) error {
 	// Randomly select a subset of prompts
 	prompts, err := s.promptService.GetRandomPromptsGivenLimit(numberOfPrompts)
 	if err != nil {
