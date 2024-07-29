@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 var (
@@ -21,29 +22,40 @@ type GameConfigService interface {
 }
 
 type GameConfigServiceImpl struct {
+	db                       *gorm.DB
 	gameRoomConfigRepository repositories.GameRoomConfigRepository
 }
 
-func NewGameConfigService(gameRoomConfigRepository repositories.GameRoomConfigRepository) GameConfigService {
-	return &GameConfigServiceImpl{gameRoomConfigRepository: gameRoomConfigRepository}
+func NewGameConfigService(db *gorm.DB, gameRoomConfigRepository repositories.GameRoomConfigRepository) GameConfigService {
+	return &GameConfigServiceImpl{db: db, gameRoomConfigRepository: gameRoomConfigRepository}
 }
 
 func (s *GameConfigServiceImpl) UpdateGameConfig(request *domain.GameRoomConfig) (*domain.GameRoomConfig, error) {
-	// Fetch game room config
-	gameRoomConfig, err := s.GetGameRoomConfigByRoomID(request.GameRoomID)
+	var gameRoomConfig *domain.GameRoomConfig
+
+	err := utils.WithTransaction(s.db, func(tx *gorm.DB) error {
+
+		// Fetch game room config
+		gameRoomConfig, err := s.GetGameRoomConfigByRoomID(request.GameRoomID)
+		if err != nil {
+			return err
+		}
+
+		// Update and save game room config
+		gameRoomConfig.TimeLimit = request.TimeLimit
+		gameRoomConfig.NumberOfPrompts = request.NumberOfPrompts
+		gameRoomConfig.Letter = strings.ToUpper(request.Letter)
+
+		if err := s.gameRoomConfigRepository.UpdateGameRoomConfig(gameRoomConfig); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
-
-	// Update and save game room config
-	gameRoomConfig.TimeLimit = request.TimeLimit
-	gameRoomConfig.NumberOfPrompts = request.NumberOfPrompts
-	gameRoomConfig.Letter = strings.ToUpper(request.Letter)
-
-	if err := s.gameRoomConfigRepository.UpdateGameRoomConfig(gameRoomConfig); err != nil {
-		return nil, err
-	}
-
 	return gameRoomConfig, nil
 }
 

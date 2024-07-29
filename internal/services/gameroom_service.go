@@ -7,6 +7,7 @@ import (
 	"scattergories-backend/pkg/utils"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type GameRoomService interface {
@@ -20,13 +21,15 @@ type GameRoomService interface {
 }
 
 type GameRoomServiceImpl struct {
+	db                 *gorm.DB
 	gameRoomRepository repositories.GameRoomRepository
 	userService        UserService
 	gameConfigService  GameConfigService
 }
 
-func NewGameRoomService(gameRoomRepository repositories.GameRoomRepository, userService UserService, gameConfigService GameConfigService) GameRoomService {
+func NewGameRoomService(db *gorm.DB, gameRoomRepository repositories.GameRoomRepository, userService UserService, gameConfigService GameConfigService) GameRoomService {
 	return &GameRoomServiceImpl{
+		db:                 db,
 		gameRoomRepository: gameRoomRepository,
 		userService:        userService,
 		gameConfigService:  gameConfigService,
@@ -34,41 +37,52 @@ func NewGameRoomService(gameRoomRepository repositories.GameRoomRepository, user
 }
 
 func (s *GameRoomServiceImpl) CreateGameRoom(hostID uuid.UUID, isPrivate bool, passcode string) (*domain.GameRoom, error) {
-	// Verify that the host user exists
-	host, err := s.userService.GetUserByID(hostID)
-	if err != nil {
-		return nil, err
-	}
+	var gameRoomResponse *domain.GameRoom
 
-	// Verify that the host user is not a host in another game room
-	if err := s.VerifyHostNotInOtherRoom(hostID); err != nil {
-		return nil, err
-	}
+	err := utils.WithTransaction(s.db, func(tx *gorm.DB) error {
 
-	// Create Game Room in the database
-	gameRoom := &domain.GameRoom{
-		RoomCode:  utils.GenerateRoomCode(),
-		HostID:    hostID,
-		IsPrivate: isPrivate,
-		Passcode:  passcode,
-	}
-	if err := s.gameRoomRepository.CreateGameRoom(gameRoom); err != nil {
-		return nil, err
-	}
+		// Verify that the host user exists
+		host, err := s.userService.GetUserByID(hostID)
+		if err != nil {
+			return err
+		}
 
-	// Update the user table with the associated game room id
-	host.GameRoomID = &gameRoom.ID
-	if err := s.userService.UpdateUser(host); err != nil {
-		return nil, err
-	}
+		// Verify that the host user is not a host in another game room
+		if err := s.VerifyHostNotInOtherRoom(hostID); err != nil {
+			return err
+		}
 
-	// Create default GameRoomConfig for the new GameRoom
-	if err := s.gameConfigService.CreateDefaultGameRoomConfig(gameRoom.ID); err != nil {
-		return nil, err
-	}
+		// Create Game Room in the database
+		gameRoom := &domain.GameRoom{
+			RoomCode:  utils.GenerateRoomCode(),
+			HostID:    hostID,
+			IsPrivate: isPrivate,
+			Passcode:  passcode,
+		}
+		if err := s.gameRoomRepository.CreateGameRoom(gameRoom); err != nil {
+			return err
+		}
 
-	// Reload the game room with the assoicated host
-	gameRoomResponse, err := s.GetGameRoomByID(gameRoom.ID)
+		// Update the user table with the associated game room id
+		host.GameRoomID = &gameRoom.ID
+		if err := s.userService.UpdateUser(host); err != nil {
+			return err
+		}
+
+		// Create default GameRoomConfig for the new GameRoom
+		if err := s.gameConfigService.CreateDefaultGameRoomConfig(gameRoom.ID); err != nil {
+			return err
+		}
+
+		// Reload the game room with the assoicated host
+		gameRoomResponse, err = s.GetGameRoomByID(gameRoom.ID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}

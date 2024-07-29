@@ -4,6 +4,7 @@ import (
 	"scattergories-backend/internal/common"
 	"scattergories-backend/internal/domain"
 	"scattergories-backend/internal/repositories"
+	"scattergories-backend/pkg/utils"
 
 	"time"
 
@@ -21,14 +22,16 @@ type GameService interface {
 }
 
 type GameServiceImpl struct {
+	db                *gorm.DB
 	gameRepository    repositories.GameRepository
 	playerService     PlayerService
 	gamePromptService GamePromptService
 	gameConfigService GameConfigService
 }
 
-func NewGameService(gameRepository repositories.GameRepository, playerService PlayerService, gamePromptService GamePromptService, gameConfigService GameConfigService) GameService {
+func NewGameService(db *gorm.DB, gameRepository repositories.GameRepository, playerService PlayerService, gamePromptService GamePromptService, gameConfigService GameConfigService) GameService {
 	return &GameServiceImpl{
+		db:                db,
 		gameRepository:    gameRepository,
 		playerService:     playerService,
 		gamePromptService: gamePromptService,
@@ -37,62 +40,86 @@ func NewGameService(gameRepository repositories.GameRepository, playerService Pl
 }
 
 func (s *GameServiceImpl) StartGame(roomID uuid.UUID) (*domain.Game, *domain.GameRoomConfig, []*domain.GamePrompt, error) {
-	// Verify no game at the Ongoing or Voting stage
-	if err := s.VerifyNoActiveGameInRoom(roomID); err != nil {
-		return nil, nil, nil, err
-	}
+	var game *domain.Game
+	var gameRoomConfig *domain.GameRoomConfig
+	var gamePrompts []*domain.GamePrompt
 
-	// Create a new game with the status set to Ongoing
-	game := &domain.Game{
-		GameRoomID: roomID,
-		Status:     domain.GameStatusOngoing,
-		StartTime:  time.Now(),
-	}
-	if err := s.gameRepository.CreateGame(game); err != nil {
-		return nil, nil, nil, err
-	}
+	err := utils.WithTransaction(s.db, func(tx *gorm.DB) error {
 
-	// Find all users in the GameRoom and create Player entries for the new game
-	if err := s.playerService.CreatePlayersInGame(game); err != nil {
-		return nil, nil, nil, err
-	}
+		// Verify no game at the Ongoing or Voting stage
+		if err := s.VerifyNoActiveGameInRoom(roomID); err != nil {
+			return err
+		}
 
-	// Load GameRoomConfig
-	gameRoomConfig, err := s.gameConfigService.GetGameRoomConfigByRoomID(roomID)
+		// Create a new game with the status set to Ongoing
+		game = &domain.Game{
+			GameRoomID: roomID,
+			Status:     domain.GameStatusOngoing,
+			StartTime:  time.Now(),
+		}
+		if err := s.gameRepository.CreateGame(game); err != nil {
+			return err
+		}
+
+		// Find all users in the GameRoom and create Player entries for the new game
+		if err := s.playerService.CreatePlayersInGame(game); err != nil {
+			return err
+		}
+
+		// Load GameRoomConfig
+		var err error
+		gameRoomConfig, err = s.gameConfigService.GetGameRoomConfigByRoomID(roomID)
+		if err != nil {
+			return err
+		}
+
+		// Create and load default game prompts
+		if err := s.gamePromptService.createGamePrompts(game.ID, gameRoomConfig.NumberOfPrompts); err != nil {
+			return err
+		}
+
+		gamePrompts, err = s.gamePromptService.getGamePromptsByGameID(game.ID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, nil, nil, err
 	}
-
-	// Create and load default game prompts
-	if err := s.gamePromptService.createGamePrompts(game.ID, gameRoomConfig.NumberOfPrompts); err != nil {
-		return nil, nil, nil, err
-	}
-
-	gamePrompts, err := s.gamePromptService.getGamePromptsByGameID(game.ID)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// Return StartGameReponse
 	return game, gameRoomConfig, gamePrompts, nil
 }
 
 func (s *GameServiceImpl) EndGame(roomID uuid.UUID, gameID uuid.UUID) (*domain.Game, []*domain.Player, error) {
-	// Find the game, set status to completed, and update the end time
-	game, err := s.GetGameByID(gameID)
+	var game *domain.Game
+	var players []*domain.Player
+
+	err := utils.WithTransaction(s.db, func(tx *gorm.DB) error {
+
+		// Find the game, set status to completed, and update the end time
+		var err error
+		game, err = s.GetGameByID(gameID)
+		if err != nil {
+			return err
+		}
+		game.Status = domain.GameStatusCompleted
+		game.EndTime = time.Now()
+		s.UpdateGame(game)
+
+		// Calculate final scores
+		players, err = s.playerService.GetPlayersByGameID(gameID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, nil, err
 	}
-	game.Status = domain.GameStatusCompleted
-	game.EndTime = time.Now()
-	s.UpdateGame(game)
-
-	// Calculate final scores
-	players, err := s.playerService.GetPlayersByGameID(gameID)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	return game, players, nil
 }
 
