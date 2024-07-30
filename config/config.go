@@ -50,6 +50,7 @@ type DBConfig struct {
 	Host     string
 	User     string
 	Name     string
+	Port     string
 	SSLMode  string
 	Password string
 }
@@ -59,6 +60,7 @@ func GetDBConfig() DBConfig {
 		Host:     os.Getenv("DB_HOST"),
 		User:     os.Getenv("DB_USER"),
 		Name:     os.Getenv("DB_NAME"),
+		Port:     os.Getenv("DB_PORT"),
 		SSLMode:  os.Getenv("DB_SSLMODE"),
 		Password: os.Getenv("DB_PASSWORD"),
 	}
@@ -66,8 +68,8 @@ func GetDBConfig() DBConfig {
 
 func ConnectDB() (*gorm.DB, error) {
 	dbConfig := GetDBConfig()
-	dsn := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=%s password=%s",
-		dbConfig.Host, dbConfig.User, dbConfig.Name, dbConfig.SSLMode, dbConfig.Password)
+	dsn := fmt.Sprintf("host=%s user=%s dbname=%s port=%s sslmode=%s password=%s",
+		dbConfig.Host, dbConfig.User, dbConfig.Name, dbConfig.Port, dbConfig.SSLMode, dbConfig.Password)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
@@ -89,7 +91,7 @@ func InitRedis() (*redis.Client, error) {
 		panic("Invalid REDIS_DB value")
 	}
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_ADDR"),
+		Addr:     os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT"),
 		Password: os.Getenv("REDIS_PASSWORD"),
 		DB:       db,
 	})

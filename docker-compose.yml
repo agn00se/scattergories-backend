@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:15.7
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+
+  redis:
+    image: redis:7.2.5
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"

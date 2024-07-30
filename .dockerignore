@@ -1,5 +1,6 @@
+.git
+.gitignore
 node_modules
-.env
 vendor
 .vscode/
 .DS_Store
