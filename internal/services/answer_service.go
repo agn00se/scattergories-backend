@@ -12,6 +12,7 @@ import (
 type AnswerService interface {
 	CreateOrUpdateAnswer(roomID uuid.UUID, answerText string, userID uuid.UUID, gamePromptID uuid.UUID) error
 	GetAnswersByGameID(gameID uuid.UUID) ([]*domain.Answer, error)
+	SetAnswerValid(playerID uuid.UUID, gamePromptID uuid.UUID) error
 }
 
 type AnswerServiceImpl struct {
@@ -33,7 +34,7 @@ func (s *AnswerServiceImpl) CreateOrUpdateAnswer(roomID uuid.UUID, answerText st
 	return utils.WithTransaction(s.db, func(tx *gorm.DB) error {
 
 		// Get gameID from gamePromptID
-		gameID, err := s.gamePromptService.getGameIDByGamePromptID(gamePromptID)
+		gameID, err := s.gamePromptService.GetGameIDByGamePromptID(gamePromptID)
 		if err != nil {
 			return err
 		}
@@ -65,4 +66,13 @@ func (s *AnswerServiceImpl) CreateOrUpdateAnswer(roomID uuid.UUID, answerText st
 
 func (s *AnswerServiceImpl) GetAnswersByGameID(gameID uuid.UUID) ([]*domain.Answer, error) {
 	return s.answerRepository.GetAnswersByGameID(gameID)
+}
+
+func (s *AnswerServiceImpl) SetAnswerValid(playerID uuid.UUID, gamePromptID uuid.UUID) error {
+	answer, err := s.answerRepository.GetAnswerByPlayerAndPrompt(playerID, gamePromptID)
+	if err != nil {
+		return err
+	}
+	answer.IsValid = true
+	return s.answerRepository.SaveAnswer(answer)
 }

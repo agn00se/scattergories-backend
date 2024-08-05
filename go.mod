@@ -10,6 +10,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.6.0
+	github.com/sashabaranov/go-openai v1.27.1
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.25.0
 	gorm.io/driver/postgres v1.5.9

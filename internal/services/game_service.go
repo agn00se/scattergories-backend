@@ -18,7 +18,7 @@ type GameService interface {
 	UpdateGame(game *domain.Game) error
 	GetGameByID(gameID uuid.UUID) (*domain.Game, error)
 	VerifyNoActiveGameInRoom(roomID uuid.UUID) error
-	GetOngoingGameInRoom(roomID uuid.UUID) (*domain.Game, error)
+	GetGameByRoomIDAndStatus(roomID uuid.UUID, status domain.GameStatus) (*domain.Game, error)
 }
 
 type GameServiceImpl struct {
@@ -74,11 +74,11 @@ func (s *GameServiceImpl) StartGame(roomID uuid.UUID) (*domain.Game, *domain.Gam
 		}
 
 		// Create and load default game prompts
-		if err := s.gamePromptService.createGamePrompts(game.ID, gameRoomConfig.NumberOfPrompts); err != nil {
+		if err := s.gamePromptService.CreateGamePrompts(game.ID, gameRoomConfig.NumberOfPrompts); err != nil {
 			return err
 		}
 
-		gamePrompts, err = s.gamePromptService.getGamePromptsByGameID(game.ID)
+		gamePrompts, err = s.gamePromptService.GetGamePromptsByGameID(game.ID)
 		if err != nil {
 			return err
 		}
@@ -142,8 +142,8 @@ func (s *GameServiceImpl) VerifyNoActiveGameInRoom(roomID uuid.UUID) error {
 	return common.ErrActiveGameExists
 }
 
-func (s *GameServiceImpl) GetOngoingGameInRoom(roomID uuid.UUID) (*domain.Game, error) {
-	game, err := s.gameRepository.GetGameByRoomIDAndStatus(roomID, string(domain.GameStatusOngoing))
+func (s *GameServiceImpl) GetGameByRoomIDAndStatus(roomID uuid.UUID, status domain.GameStatus) (*domain.Game, error) {
+	game, err := s.gameRepository.GetGameByRoomIDAndStatus(roomID, string(status))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, common.ErrNoOngoingGameInRoom // No ongoing games found

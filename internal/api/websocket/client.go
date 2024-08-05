@@ -114,7 +114,7 @@ func (c *Client) startCountdown(duration time.Duration, roomID uuid.UUID) {
 func (c *Client) triggerWorkflow(roomID uuid.UUID) {
 	game, answers, err := c.handler.LoadDataForRoom(roomID)
 	if err != nil {
-		sendError(c, "Error loading data")
+		sendError(c, "Error loading data: "+err.Error())
 		return
 	}
 

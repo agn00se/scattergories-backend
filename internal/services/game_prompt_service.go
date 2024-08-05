@@ -10,9 +10,9 @@ import (
 )
 
 type GamePromptService interface {
-	getGamePromptsByGameID(gameID uuid.UUID) ([]*domain.GamePrompt, error)
-	getGameIDByGamePromptID(gamePromptID uuid.UUID) (uuid.UUID, error)
-	createGamePrompts(gameID uuid.UUID, numberOfPrompts int) error
+	GetGamePromptsByGameID(gameID uuid.UUID) ([]*domain.GamePrompt, error)
+	GetGameIDByGamePromptID(gamePromptID uuid.UUID) (uuid.UUID, error)
+	CreateGamePrompts(gameID uuid.UUID, numberOfPrompts int) error
 }
 
 type GamePromptServiceImpl struct {
@@ -27,11 +27,11 @@ func NewGamePromptService(gamePromptRepository repositories.GamePromptRepository
 	}
 }
 
-func (s *GamePromptServiceImpl) getGamePromptsByGameID(gameID uuid.UUID) ([]*domain.GamePrompt, error) {
+func (s *GamePromptServiceImpl) GetGamePromptsByGameID(gameID uuid.UUID) ([]*domain.GamePrompt, error) {
 	return s.gamePromptRepository.GetGamePromptsByGameID(gameID)
 }
 
-func (s *GamePromptServiceImpl) getGameIDByGamePromptID(gamePromptID uuid.UUID) (uuid.UUID, error) {
+func (s *GamePromptServiceImpl) GetGameIDByGamePromptID(gamePromptID uuid.UUID) (uuid.UUID, error) {
 	gameID, err := s.gamePromptRepository.GetGameIDByGamePromptID(gamePromptID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -42,7 +42,7 @@ func (s *GamePromptServiceImpl) getGameIDByGamePromptID(gamePromptID uuid.UUID) 
 	return gameID, nil
 }
 
-func (s *GamePromptServiceImpl) createGamePrompts(gameID uuid.UUID, numberOfPrompts int) error {
+func (s *GamePromptServiceImpl) CreateGamePrompts(gameID uuid.UUID, numberOfPrompts int) error {
 	// Randomly select a subset of prompts
 	prompts, err := s.promptService.GetRandomPromptsGivenLimit(numberOfPrompts)
 	if err != nil {

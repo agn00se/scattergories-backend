@@ -3,18 +3,14 @@ package responses
 import "scattergories-backend/internal/domain"
 
 type AnswerResponse struct {
-	Answer     string              `json:"answer"`
-	IsValid    bool                `json:"is_valid"`
-	Player     *PlayerResponse     `json:"player"`
-	GamePrompt *GamePromptResponse `json:"game_prompt"`
+	UserID string `json:"user_id"`
+	Answer string `json:"answer"`
 }
 
 func ToAnswerResponse(answer *domain.Answer) *AnswerResponse {
 	return &AnswerResponse{
-		Answer:     answer.Answer,
-		IsValid:    answer.IsValid,
-		Player:     ToPlayerResponse(&answer.Player),
-		GamePrompt: ToGamePromptResponse(&answer.GamePrompt),
+		UserID: answer.Player.UserID.String(),
+		Answer: answer.Answer,
 	}
 }
 

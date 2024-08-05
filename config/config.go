@@ -161,10 +161,11 @@ func InitializeApp() (*AppConfig, error) {
 	answerService := services.NewAnswerService(db, answerRepo, gamePromptService, playerService)
 	gameRoomService := services.NewGameRoomService(db, gameRoomRepo, userService, gameConfigService)
 	gameService := services.NewGameService(db, gameRepo, playerService, gamePromptService, gameConfigService)
-	gameRoomDataService := services.NewGameRoomDataService(db, answerService, gameService)
+	gameRoomDataService := services.NewGameRoomDataService(db, answerService, gameService, playerService, gamePromptService)
 	gameRoomJoinService := services.NewGameRoomJoinService(db, gameRoomService, userService, gameService)
 	permissionService := services.NewPermissionService(userService, gameRoomService)
-	messageHandler := websocket.NewMessageHandler(gameService, gameRoomService, gameRoomDataService, permissionService, answerService, gameConfigService)
+	answerValidationService := services.NewAnswerValidationService(gameRoomDataService, gameConfigService, answerService)
+	messageHandler := websocket.NewMessageHandler(gameService, gameRoomService, gameRoomDataService, permissionService, answerService, gameConfigService, answerValidationService)
 
 	return &AppConfig{
 		DB:                      db,

@@ -20,12 +20,13 @@ type MessageHandler interface {
 }
 
 type MessageHandlerImpl struct {
-	gameService         services.GameService
-	gameRoomService     services.GameRoomService
-	gameRoomDataService services.GameRoomDataService
-	permissionService   services.PermissionService
-	answerService       services.AnswerService
-	gameConfigService   services.GameConfigService
+	gameService             services.GameService
+	gameRoomService         services.GameRoomService
+	gameRoomDataService     services.GameRoomDataService
+	permissionService       services.PermissionService
+	answerService           services.AnswerService
+	gameConfigService       services.GameConfigService
+	answerValidationService services.AnswerValidationService
 }
 
 func NewMessageHandler(
@@ -35,30 +36,47 @@ func NewMessageHandler(
 	permissionService services.PermissionService,
 	answerService services.AnswerService,
 	gameConfigService services.GameConfigService,
+	answerValidationService services.AnswerValidationService,
 ) MessageHandler {
 	return &MessageHandlerImpl{
-		gameService:         gameService,
-		gameRoomService:     gameRoomService,
-		gameRoomDataService: gameRoomDataService,
-		permissionService:   permissionService,
-		answerService:       answerService,
-		gameConfigService:   gameConfigService,
+		gameService:             gameService,
+		gameRoomService:         gameRoomService,
+		gameRoomDataService:     gameRoomDataService,
+		permissionService:       permissionService,
+		answerService:           answerService,
+		gameConfigService:       gameConfigService,
+		answerValidationService: answerValidationService,
 	}
 }
 
 func (h *MessageHandlerImpl) HandleMessage(client *Client, roomID uuid.UUID, messageType string, message []byte) {
 	switch messageType {
 	case "start_game_request":
-		h.startGame(client, roomID, message)
+		h.startGame(client, roomID)
 	case "end_game_request":
 		h.endGame(client, roomID, message)
 	case "submit_answer_request":
 		h.submitAnswer(client, roomID, message)
 	case "update_game_config_request":
 		h.updateGameConfig(client, roomID, message)
+	case "validate_answers_request":
+		h.validateAnswers(client, roomID)
+	case "load_data_request": // test
+		h.TestLoadData(client, roomID)
 	default:
 		sendError(client, "Unknown message type")
 	}
+}
+
+// test
+func (h *MessageHandlerImpl) TestLoadData(client *Client, roomID uuid.UUID) {
+	game, answers, err := h.LoadDataForRoom(roomID)
+	if err != nil {
+		sendError(client, "Error loading data: "+err.Error())
+		return
+	}
+	response := responses.ToCountdownFinishResponse(game, answers)
+	sendResponse(client, response)
 }
 
 func (h *MessageHandlerImpl) GetGameRoomByID(roomID uuid.UUID) (*domain.GameRoom, error) {
@@ -69,24 +87,13 @@ func (h *MessageHandlerImpl) LoadDataForRoom(roomID uuid.UUID) (*domain.Game, []
 	return h.gameRoomDataService.LoadDataForRoom(roomID)
 }
 
-func (h *MessageHandlerImpl) startGame(client *Client, roomID uuid.UUID, message []byte) {
-	var req requests.StartGameRequest
-	if err := json.Unmarshal(message, &req); err != nil {
-		sendError(client, "Invalid start_game_request format")
-		return
-	}
-	if err := validators.Validate.Struct(req); err != nil {
-		sendError(client, "Validation failed: "+err.Error())
-		return
-	}
-
+func (h *MessageHandlerImpl) startGame(client *Client, roomID uuid.UUID) {
 	permitted, err := h.permissionService.HasPermission(client.userID, services.GameRoomWritePermission, roomID)
 	if err != nil || !permitted {
 		sendError(client, err.Error())
 		return
 	}
 
-	// Start the game
 	game, gameRoomConfig, gamePrompts, err := h.gameService.StartGame(roomID)
 	if err != nil {
 		sendError(client, err.Error())
@@ -192,4 +199,21 @@ func (h *MessageHandlerImpl) updateGameConfig(client *Client, roomID uuid.UUID, 
 
 	response := responses.ToUpdateGameConfigResponse(config)
 	sendResponse(client, response)
+}
+
+func (h *MessageHandlerImpl) validateAnswers(client *Client, roomID uuid.UUID) {
+	permitted, err := h.permissionService.HasPermission(client.userID, services.GameRoomWritePermission, roomID)
+	if err != nil || !permitted {
+		sendError(client, err.Error())
+		return
+	}
+
+	if err := h.answerValidationService.ValidateAnswers(roomID); err != nil {
+		sendError(client, err.Error())
+		return
+	}
+	sendResponse(client, map[string]interface{}{
+		"type":   "validate_answers_response",
+		"status": "Answer validated",
+	})
 }

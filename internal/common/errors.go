@@ -17,6 +17,7 @@ var (
 	ErrGameRoomWithGivenHostNotFound  = errors.New("game room with the specied host not found")
 	ErrInvalidToken                   = errors.New("invalid token")
 	ErrLoginFailed                    = errors.New("invalid login credentials")
+	ErrNoAnswersToValidate            = errors.New("no answers have been submitted for validation")
 	ErrNoOngoingGameInRoom            = errors.New("no ongoing game in room")
 	ErrPlayerNotFound                 = errors.New("player not found")
 	ErrUserIsAlreadyHostOfAnotherRoom = errors.New("user is already host of another room")

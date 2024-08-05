@@ -62,7 +62,7 @@ func (s *PermissionServiceImpl) hasGameRoomReadPermission(userID uuid.UUID, reso
 	return true, nil
 }
 
-// DeleteGameRoom, StartGame, EndGame, UpdateGameConfig
+// DeleteGameRoom, StartGame, EndGame, UpdateGameConfig, ValidateAnswers
 func (s *PermissionServiceImpl) hasGameRoomWritePermission(userID uuid.UUID, resourceID uuid.UUID) (bool, error) {
 	// Verify user exists
 	_, err := s.UserService.GetUserByID(userID)
