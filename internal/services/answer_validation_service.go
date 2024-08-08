@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	openai "github.com/sashabaranov/go-openai"
+	"github.com/sashabaranov/go-openai"
 )
 
 type AnswerValidationService interface {
@@ -138,17 +138,25 @@ func (s *AnswerValidationServiceImpl) ValidateAnswersWithLLM(promptAnswers []map
 	prompt := s.ConstructPrompt(promptAnswers)
 
 	// Call OpenAI API
-	response, err := client.CreateCompletion(context.TODO(), openai.CompletionRequest{
-		Model:     openai.GPT4,
-		Prompt:    prompt,
-		MaxTokens: 1000,
-	})
+	response, err := client.CreateChatCompletion(
+		context.TODO(),
+		openai.ChatCompletionRequest{
+			Model: openai.GPT3Dot5Turbo0125,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: prompt,
+				},
+			},
+			MaxTokens: 1000,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	// Parse LLM Response
-	return s.ParseLLMResponse(response.Choices[0].Text, promptAnswers)
+	return s.ParseLLMResponse(response.Choices[0].Message.Content, promptAnswers)
 }
 
 /*

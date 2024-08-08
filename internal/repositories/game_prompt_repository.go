@@ -23,7 +23,7 @@ func NewGamePromptRepository(db *gorm.DB) GamePromptRepository {
 
 func (r *GamePromptRepositoryImpl) GetGamePromptsByGameID(gameID uuid.UUID) ([]*domain.GamePrompt, error) {
 	var gamePrompts []*domain.GamePrompt
-	if err := r.db.Where("game_id = ?", gameID).Preload("Prompt").Find(&gamePrompts).Error; err != nil {
+	if err := r.db.Where("game_id = ?", gameID).Preload("Prompt").Preload("Answers.Player.User").Find(&gamePrompts).Error; err != nil {
 		return nil, err
 	}
 	return gamePrompts, nil

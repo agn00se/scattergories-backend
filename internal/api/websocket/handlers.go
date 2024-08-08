@@ -61,22 +61,9 @@ func (h *MessageHandlerImpl) HandleMessage(client *Client, roomID uuid.UUID, mes
 		h.updateGameConfig(client, roomID, message)
 	case "validate_answers_request":
 		h.validateAnswers(client, roomID)
-	case "load_data_request": // test
-		h.TestLoadData(client, roomID)
 	default:
 		sendError(client, "Unknown message type")
 	}
-}
-
-// test
-func (h *MessageHandlerImpl) TestLoadData(client *Client, roomID uuid.UUID) {
-	game, answers, err := h.LoadDataForRoom(roomID)
-	if err != nil {
-		sendError(client, "Error loading data: "+err.Error())
-		return
-	}
-	response := responses.ToCountdownFinishResponse(game, answers)
-	sendResponse(client, response)
 }
 
 func (h *MessageHandlerImpl) GetGameRoomByID(roomID uuid.UUID) (*domain.GameRoom, error) {

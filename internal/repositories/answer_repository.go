@@ -27,7 +27,7 @@ func (r *AnswerRepositoryImpl) GetAnswersByGameID(gameID uuid.UUID) ([]*domain.A
 	if err := r.db.Preload("Player.User").Preload("GamePrompt.Prompt").
 		Joins("JOIN players ON players.id = answers.player_id").
 		Where("game_prompt_id IN (?)", r.db.Table("game_prompts").Select("id").Where("game_id = ?", gameID)).
-		Order("game_prompt_id, player.user_id").
+		Order("game_prompt_id, players.user_id").
 		Find(&answers).Error; err != nil {
 		return nil, err
 	}
