@@ -10,6 +10,18 @@ services:
     depends_on:
       - postgres
       - redis
+      - rabbitmq
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["/app/worker"]
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+    scale: 1
 
   postgres:
     image: postgres:15.7
@@ -26,3 +38,9 @@ services:
     image: redis:7.2.5
     ports:
       - "6380:6379" # Map container port 6379 to host port 6380
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"   # RabbitMQ messaging port
+      - "15672:15672" # RabbitMQ management UI port

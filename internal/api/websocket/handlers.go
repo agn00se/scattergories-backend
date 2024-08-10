@@ -5,6 +5,7 @@ import (
 	"scattergories-backend/internal/api/websocket/requests"
 	"scattergories-backend/internal/api/websocket/responses"
 	"scattergories-backend/internal/domain"
+	"scattergories-backend/internal/rabbitmq"
 	"scattergories-backend/internal/services"
 	"scattergories-backend/pkg/utils"
 	"scattergories-backend/pkg/validators"
@@ -37,6 +38,7 @@ func NewMessageHandler(
 	answerService services.AnswerService,
 	gameConfigService services.GameConfigService,
 	answerValidationService services.AnswerValidationService,
+	rabbitMQ *rabbitmq.RabbitMQ,
 ) MessageHandler {
 	return &MessageHandlerImpl{
 		gameService:             gameService,

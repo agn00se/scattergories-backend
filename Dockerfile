@@ -17,7 +17,8 @@ RUN go mod download
 COPY . .
 
 # Build the Go app
-RUN go build -o main ./cmd/scattergories
+RUN go build -o main ./cmd/scattergories/main.go
+RUN go build -o worker ./cmd/scattergories_worker/main.go
 
 # Start a new stage from scratch
 FROM alpine:latest
@@ -27,6 +28,7 @@ WORKDIR /app
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=build /app/main /app/main
+COPY --from=build /app/worker /app/worker
 
 # Copy the .env file into the container
 COPY .env .env

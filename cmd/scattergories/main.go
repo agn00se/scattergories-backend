@@ -24,6 +24,11 @@ func main() {
 		log.Fatalf("failed to initialize app: %v", err)
 	}
 
+	// Defer the closure of connections until main exits
+	defer appConfig.DB.Close()
+	defer appConfig.RedisClient.Close()
+	defer appConfig.RabbitMQ.Close()
+
 	go websocket.HubInstance.Run()
 
 	router := gin.Default()

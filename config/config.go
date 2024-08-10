@@ -3,11 +3,13 @@ package config
 import (
 	"bufio"
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
 	"scattergories-backend/internal/api/websocket"
 	"scattergories-backend/internal/domain"
+	"scattergories-backend/internal/rabbitmq"
 	"scattergories-backend/internal/repositories"
 	"scattergories-backend/internal/services"
 	"strconv"
@@ -19,8 +21,9 @@ import (
 )
 
 type AppConfig struct {
-	DB                      *gorm.DB
+	DB                      *sql.DB
 	RedisClient             *redis.Client
+	RabbitMQ                *rabbitmq.RabbitMQ
 	UserRepo                repositories.UserRepository
 	AnswerRepo              repositories.AnswerRepository
 	GamePromptRepo          repositories.GamePromptRepository
@@ -44,6 +47,10 @@ type AppConfig struct {
 	GameRoomJoinService     services.GameRoomJoinService
 	PermissionService       services.PermissionService
 	MessageHandler          websocket.MessageHandler
+}
+
+type WorkerAppConfig struct {
+	RabbitMQ *rabbitmq.RabbitMQ
 }
 
 type DBConfig struct {
@@ -125,7 +132,11 @@ func LoadPrompts(db *gorm.DB) {
 
 func InitializeApp() (*AppConfig, error) {
 	// Initialize DB
-	db, err := ConnectDB()
+	gormDB, err := ConnectDB()
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := gormDB.DB()
 	if err != nil {
 		return nil, err
 	}
@@ -136,18 +147,24 @@ func InitializeApp() (*AppConfig, error) {
 		return nil, err
 	}
 
+	// Initialize RabbitMQ
+	rabbitMQ, err := rabbitmq.NewRabbitMQ()
+	if err != nil {
+		return nil, err
+	}
+
 	// Load prompts into DB
-	LoadPrompts(db)
+	LoadPrompts(gormDB)
 
 	// Initialize repositories
-	userRepo := repositories.NewUserRepository(db)
-	answerRepo := repositories.NewAnswerRepository(db)
-	gamePromptRepo := repositories.NewGamePromptRepository(db)
-	gameRepo := repositories.NewGameRepository(db)
-	gameRoomRepo := repositories.NewGameRoomRepository(db)
-	gameRoomConfigRepo := repositories.NewGameRoomConfigRepository(db)
-	playerRepo := repositories.NewPlayerRepository(db)
-	promptRepo := repositories.NewPromptRepository(db)
+	userRepo := repositories.NewUserRepository(gormDB)
+	answerRepo := repositories.NewAnswerRepository(gormDB)
+	gamePromptRepo := repositories.NewGamePromptRepository(gormDB)
+	gameRepo := repositories.NewGameRepository(gormDB)
+	gameRoomRepo := repositories.NewGameRoomRepository(gormDB)
+	gameRoomConfigRepo := repositories.NewGameRoomConfigRepository(gormDB)
+	playerRepo := repositories.NewPlayerRepository(gormDB)
+	promptRepo := repositories.NewPromptRepository(gormDB)
 
 	// Initialize services
 	tokenService := services.NewTokenService(redisClient)
@@ -157,19 +174,20 @@ func InitializeApp() (*AppConfig, error) {
 	playerService := services.NewPlayerService(playerRepo, userService)
 	promptService := services.NewPromptService(promptRepo)
 	gamePromptService := services.NewGamePromptService(gamePromptRepo, promptService)
-	gameConfigService := services.NewGameConfigService(db, gameRoomConfigRepo)
-	answerService := services.NewAnswerService(db, answerRepo, gamePromptService, playerService)
-	gameRoomService := services.NewGameRoomService(db, gameRoomRepo, userService, gameConfigService)
-	gameService := services.NewGameService(db, gameRepo, playerService, gamePromptService, gameConfigService)
-	gameRoomDataService := services.NewGameRoomDataService(db, answerService, gameService, playerService, gamePromptService)
-	gameRoomJoinService := services.NewGameRoomJoinService(db, gameRoomService, userService, gameService)
+	gameConfigService := services.NewGameConfigService(gormDB, gameRoomConfigRepo)
+	answerService := services.NewAnswerService(gormDB, answerRepo, gamePromptService, playerService)
+	gameRoomService := services.NewGameRoomService(gormDB, gameRoomRepo, userService, gameConfigService)
+	gameService := services.NewGameService(gormDB, gameRepo, playerService, gamePromptService, gameConfigService)
+	gameRoomDataService := services.NewGameRoomDataService(gormDB, answerService, gameService, playerService, gamePromptService)
+	gameRoomJoinService := services.NewGameRoomJoinService(gormDB, gameRoomService, userService, gameService)
 	permissionService := services.NewPermissionService(userService, gameRoomService)
 	answerValidationService := services.NewAnswerValidationService(gameRoomDataService, gameConfigService, answerService)
-	messageHandler := websocket.NewMessageHandler(gameService, gameRoomService, gameRoomDataService, permissionService, answerService, gameConfigService, answerValidationService)
+	messageHandler := websocket.NewMessageHandler(gameService, gameRoomService, gameRoomDataService, permissionService, answerService, gameConfigService, answerValidationService, rabbitMQ)
 
 	return &AppConfig{
-		DB:                      db,
+		DB:                      sqlDB,
 		RedisClient:             redisClient,
+		RabbitMQ:                rabbitMQ,
 		UserRepo:                userRepo,
 		AnswerRepo:              answerRepo,
 		GamePromptRepo:          gamePromptRepo,
@@ -193,5 +211,19 @@ func InitializeApp() (*AppConfig, error) {
 		GameRoomJoinService:     gameRoomJoinService,
 		PermissionService:       permissionService,
 		MessageHandler:          messageHandler,
+	}, nil
+}
+
+// In distributed systems, the main application and the worker(s) often run as separate processes,
+// meaning they will naturally have separate connections to RabbitMQ.
+func InitializeWorkerApp() (*WorkerAppConfig, error) {
+	// Initialize RabbitMQ
+	rabbitMQ, err := rabbitmq.NewRabbitMQ()
+	if err != nil {
+		return nil, err
+	}
+
+	return &WorkerAppConfig{
+		RabbitMQ: rabbitMQ,
 	}, nil
 }
