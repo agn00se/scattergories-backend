@@ -76,18 +76,13 @@ func (s *GameRoomDataServiceImpl) LoadDataForRoom(roomID uuid.UUID) (*domain.Gam
 	return game, answers, nil
 }
 
-func (s *GameRoomDataServiceImpl) GetAnswersToBeValidated(roomID uuid.UUID) ([]map[string]interface{}, error) {
-	game, err := s.gameService.GetGameByRoomIDAndStatus(roomID, domain.GameStatusVoting)
+func (s *GameRoomDataServiceImpl) GetAnswersToBeValidated(gameID uuid.UUID) ([]map[string]interface{}, error) {
+	gamePrompts, err := s.gamePromptService.GetGamePromptsByGameID(gameID)
 	if err != nil {
 		return nil, err
 	}
 
-	gamePrompts, err := s.gamePromptService.GetGamePromptsByGameID(game.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	players, err := s.playerService.GetPlayersByGameID(game.ID)
+	players, err := s.playerService.GetPlayersByGameID(gameID)
 	if err != nil {
 		return nil, err
 	}

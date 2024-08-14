@@ -46,6 +46,7 @@ type AppConfig struct {
 	GameRoomDataService     services.GameRoomDataService
 	GameRoomJoinService     services.GameRoomJoinService
 	PermissionService       services.PermissionService
+	AnswerValidationService services.AnswerValidationService
 	MessageHandler          websocket.MessageHandler
 }
 
@@ -181,7 +182,7 @@ func InitializeApp() (*AppConfig, error) {
 	gameRoomDataService := services.NewGameRoomDataService(gormDB, answerService, gameService, playerService, gamePromptService)
 	gameRoomJoinService := services.NewGameRoomJoinService(gormDB, gameRoomService, userService, gameService)
 	permissionService := services.NewPermissionService(userService, gameRoomService)
-	answerValidationService := services.NewAnswerValidationService(gameRoomDataService, gameConfigService, answerService)
+	answerValidationService := services.NewAnswerValidationService(rabbitMQ, gameRoomDataService, gameConfigService, gameService, answerService)
 	messageHandler := websocket.NewMessageHandler(gameService, gameRoomService, gameRoomDataService, permissionService, answerService, gameConfigService, answerValidationService, rabbitMQ)
 
 	return &AppConfig{
@@ -210,6 +211,7 @@ func InitializeApp() (*AppConfig, error) {
 		GameRoomDataService:     gameRoomDataService,
 		GameRoomJoinService:     gameRoomJoinService,
 		PermissionService:       permissionService,
+		AnswerValidationService: answerValidationService,
 		MessageHandler:          messageHandler,
 	}, nil
 }

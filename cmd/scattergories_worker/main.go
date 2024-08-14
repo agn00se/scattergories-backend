@@ -1,11 +1,18 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"log"
+	"os"
 	"scattergories-backend/config"
+	"scattergories-backend/internal/rabbitmq"
 
 	"github.com/joho/godotenv"
+	"github.com/sashabaranov/go-openai"
 )
+
+var openaiClient *openai.Client
 
 func main() {
 	if err := godotenv.Load(); err != nil {
@@ -20,8 +27,11 @@ func main() {
 
 	defer workerAppConfig.RabbitMQ.Close()
 
-	// Consume messages from RabbitMQ and process them
-	msgs, err := workerAppConfig.RabbitMQ.Consume("llm_validation_queue")
+	// Initialize OpenAI client
+	openaiClient = openai.NewClient(os.Getenv("OPENAI_API_KEY"))
+
+	// Consume messages from RabbitMQ
+	msgs, err := workerAppConfig.RabbitMQ.Consume("llm_request_queue")
 	if err != nil {
 		log.Fatalf("Failed to consume messages: %v", err)
 	}
@@ -30,10 +40,57 @@ func main() {
 
 	// Process messages
 	for msg := range msgs {
-		log.Printf("Received message: %s", msg.Body)
-		// 	err := services.HandleMessage(msg.Body)
-		// if err != nil {
-		// 		log.Printf("Error processing message: %v", err)
-		// 	}
+		processMessage(workerAppConfig.RabbitMQ, msg.Body)
 	}
+}
+
+func processMessage(rabbitMQ *rabbitmq.RabbitMQ, messageBody []byte) {
+	var reqMsg rabbitmq.RequestMessage
+	err := json.Unmarshal(messageBody, &reqMsg)
+	if err != nil {
+		log.Printf("Error unmarshaling request message: %v", err)
+		return
+	}
+
+	response, err := sendLLMRequest(reqMsg.Prompt)
+	if err != nil {
+		log.Printf("Error sending LLM request: %v", err)
+		return
+	}
+
+	responseMsg := rabbitmq.ResponseMessage{
+		GameID:   reqMsg.GameID,
+		Response: response,
+	}
+	responseBody, err := json.Marshal(responseMsg)
+	if err != nil {
+		log.Printf("Error marshaling response message: %v", err)
+		return
+	}
+
+	err = rabbitMQ.Publish("llm_response_queue", responseBody)
+	if err != nil {
+		log.Printf("Error publishing LLM response message: %v", err)
+	}
+}
+
+func sendLLMRequest(prompt string) (string, error) {
+	response, err := openaiClient.CreateChatCompletion(
+		context.TODO(),
+		openai.ChatCompletionRequest{
+			Model: openai.GPT3Dot5Turbo0125,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: prompt,
+				},
+			},
+			MaxTokens: 1000,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return response.Choices[0].Message.Content, nil
 }

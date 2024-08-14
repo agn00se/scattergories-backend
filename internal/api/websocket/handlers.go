@@ -18,6 +18,7 @@ type MessageHandler interface {
 	HandleMessage(client *Client, roomID uuid.UUID, messageType string, message []byte)
 	GetGameRoomByID(roomID uuid.UUID) (*domain.GameRoom, error)
 	LoadDataForRoom(roomID uuid.UUID) (*domain.Game, []*domain.Answer, error)
+	NotifyClientsLLMCompleted(gameID uuid.UUID) error
 }
 
 type MessageHandlerImpl struct {
@@ -74,6 +75,32 @@ func (h *MessageHandlerImpl) GetGameRoomByID(roomID uuid.UUID) (*domain.GameRoom
 
 func (h *MessageHandlerImpl) LoadDataForRoom(roomID uuid.UUID) (*domain.Game, []*domain.Answer, error) {
 	return h.gameRoomDataService.LoadDataForRoom(roomID)
+}
+
+func (h *MessageHandlerImpl) NotifyClientsLLMCompleted(gameID uuid.UUID) error {
+	// Retrieve the roomID associated with the gameID
+	game, err := h.gameService.GetGameByID(gameID)
+	if err != nil {
+		return err
+	}
+
+	messageContent := map[string]interface{}{
+		"type":   "validate_answers_response",
+		"status": "Answer validation completed",
+	}
+
+	messageBytes, err := json.Marshal(messageContent)
+	if err != nil {
+		return err
+	}
+
+	// Broadcast the message to all clients in the room
+	HubInstance.broadcast <- Message{
+		RoomID:  game.GameRoomID,
+		Content: messageBytes,
+	}
+
+	return nil
 }
 
 func (h *MessageHandlerImpl) startGame(client *Client, roomID uuid.UUID) {

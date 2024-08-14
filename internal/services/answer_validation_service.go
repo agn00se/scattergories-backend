@@ -1,43 +1,46 @@
 package services
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
-	"log"
-	"os"
+	"scattergories-backend/internal/domain"
+	"scattergories-backend/internal/rabbitmq"
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/sashabaranov/go-openai"
 )
 
 type AnswerValidationService interface {
 	ValidateAnswers(roomID uuid.UUID) error
 	SanitizeAnswers(promptAnswers []map[string]interface{}, letter string) []map[string]interface{}
-	ValidateAnswersWithLLM(promptAnswers []map[string]interface{}, client *openai.Client) (map[uuid.UUID][]map[string]interface{}, error)
+	ValidateAnswersWithLLM(gameID uuid.UUID, promptAnswers []map[string]interface{}) error
 	ConstructPrompt(promptAnswers []map[string]interface{}) string
+	ProcessLLMResponse(gameID string, response string) error
 	ParseLLMResponse(responseText string, promptAnswers []map[string]interface{}) (map[uuid.UUID][]map[string]interface{}, error)
 }
 
 type AnswerValidationServiceImpl struct {
-	openaiClient        *openai.Client
+	rabbitMQ            *rabbitmq.RabbitMQ
 	gameRoomDataService GameRoomDataService
 	gameConfigService   GameConfigService
+	gameService         GameService
 	answerService       AnswerService
 }
 
 func NewAnswerValidationService(
+	rabbitMQ *rabbitmq.RabbitMQ,
 	gameRoomDataService GameRoomDataService,
 	gameConfigService GameConfigService,
+	gameService GameService,
 	answerService AnswerService,
 ) AnswerValidationService {
-	service := &AnswerValidationServiceImpl{
+	return &AnswerValidationServiceImpl{
+		rabbitMQ:            rabbitMQ,
 		gameRoomDataService: gameRoomDataService,
 		gameConfigService:   gameConfigService,
+		gameService:         gameService,
 		answerService:       answerService,
 	}
-	service.openaiClient = service.initOpenAI()
-	return service
 }
 
 const promptInstructions = `Evaluate the following answers to determine if they are valid based on the given context. 
@@ -45,19 +48,16 @@ Answer each with 'Yes' or 'No'. If the answer is empty, return 'No'. Provide the
 
 `
 
-// Initialize OpenAI client
-func (s *AnswerValidationServiceImpl) initOpenAI() *openai.Client {
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		log.Fatalf("OpenAI API key is not set")
-	}
-	return openai.NewClient(apiKey)
-}
-
 // Function to validate answers using OpenAI's GPT-4
 func (s *AnswerValidationServiceImpl) ValidateAnswers(roomID uuid.UUID) error {
+	// Get the ongoing game in the game room
+	game, err := s.gameService.GetGameByRoomIDAndStatus(roomID, domain.GameStatusVoting)
+	if err != nil {
+		return err
+	}
+
 	// Load prompts and promptAnswers for the game
-	promptAnswers, err := s.gameRoomDataService.GetAnswersToBeValidated(roomID)
+	promptAnswers, err := s.gameRoomDataService.GetAnswersToBeValidated(game.ID)
 	if err != nil {
 		return err
 	}
@@ -71,25 +71,10 @@ func (s *AnswerValidationServiceImpl) ValidateAnswers(roomID uuid.UUID) error {
 	// Sanitize and map answers to a map of prompt:answers
 	sanitizedPromptAnswers := s.SanitizeAnswers(promptAnswers, config.Letter)
 
-	// Validate answers using OpenAI's GPT-4
-	results, err := s.ValidateAnswersWithLLM(sanitizedPromptAnswers, s.openaiClient)
+	// Validate answers using the LLM via message queue
+	err = s.ValidateAnswersWithLLM(game.ID, sanitizedPromptAnswers)
 	if err != nil {
 		return err
-	}
-
-	// Update Answer table
-	for gamePromptID, validations := range results {
-		for _, validation := range validations {
-			playerID := validation["player_id"].(uuid.UUID)
-			valid := validation["valid"].(bool)
-
-			// No need to update validatity for invalid answers since the field is initialized as false
-			if valid {
-				if err := s.answerService.SetAnswerValid(playerID, gamePromptID); err != nil {
-					return err
-				}
-			}
-		}
 	}
 
 	return nil
@@ -133,30 +118,29 @@ func (s *AnswerValidationServiceImpl) SanitizeAnswers(promptAnswers []map[string
 	return promptAnswers
 }
 
-func (s *AnswerValidationServiceImpl) ValidateAnswersWithLLM(promptAnswers []map[string]interface{}, client *openai.Client) (map[uuid.UUID][]map[string]interface{}, error) {
+func (s *AnswerValidationServiceImpl) ValidateAnswersWithLLM(gameID uuid.UUID, promptAnswers []map[string]interface{}) error {
 	// Construct LLM Prompt
 	prompt := s.ConstructPrompt(promptAnswers)
 
-	// Call OpenAI API
-	response, err := client.CreateChatCompletion(
-		context.TODO(),
-		openai.ChatCompletionRequest{
-			Model: openai.GPT3Dot5Turbo0125,
-			Messages: []openai.ChatCompletionMessage{
-				{
-					Role:    openai.ChatMessageRoleUser,
-					Content: prompt,
-				},
-			},
-			MaxTokens: 1000,
-		},
-	)
-	if err != nil {
-		return nil, err
+	// Create the request message
+	reqMsg := rabbitmq.RequestMessage{
+		GameID: gameID.String(),
+		Prompt: prompt,
 	}
 
-	// Parse LLM Response
-	return s.ParseLLMResponse(response.Choices[0].Message.Content, promptAnswers)
+	// Marshal the request message
+	messageBody, err := json.Marshal(reqMsg)
+	if err != nil {
+		return err
+	}
+
+	// Send the request message to the message queue
+	err = s.rabbitMQ.Publish("llm_request_queue", messageBody)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /*
@@ -195,6 +179,40 @@ func (s *AnswerValidationServiceImpl) ConstructPrompt(promptAnswers []map[string
 		promptNumber++
 	}
 	return promptBuilder.String()
+}
+
+func (s *AnswerValidationServiceImpl) ProcessLLMResponse(gameIDString string, response string) error {
+	gameID, err := uuid.Parse(gameIDString)
+	if err != nil {
+		return fmt.Errorf("invalid gameID: %v", err)
+	}
+
+	promptAnswers, err := s.gameRoomDataService.GetAnswersToBeValidated(gameID)
+	if err != nil {
+		return err
+	}
+
+	results, err := s.ParseLLMResponse(response, promptAnswers)
+	if err != nil {
+		return err
+	}
+
+	// Update Answer table
+	for gamePromptID, validations := range results {
+		for _, validation := range validations {
+			playerID := validation["player_id"].(uuid.UUID)
+			valid := validation["valid"].(bool)
+
+			// No need to update validity for invalid answers since the field is initialized as false
+			if valid {
+				if err := s.answerService.SetAnswerValid(playerID, gamePromptID); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 /*
